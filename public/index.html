@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InboxAI — WhatsApp Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Inbox<span class="brand-accent">AI</span></span>
+    </div>
+
+    <!-- Organization switcher -->
+    <div class="org-switcher" id="orgSwitcher">
+      <button class="org-switch-btn" id="orgSwitchBtn">
+        <span class="org-avatar" id="orgAvatar">·</span>
+        <span class="org-current">
+          <span class="org-current-name" id="orgCurrentName">Loading…</span>
+          <span class="org-current-role" id="orgCurrentRole"></span>
+        </span>
+        <svg class="org-chevron" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4"/></svg>
+      </button>
+      <div class="org-menu hidden" id="orgMenu">
+        <div class="org-menu-label">Your organizations</div>
+        <div id="orgList"></div>
+        <div class="org-menu-divider"></div>
+        <button class="org-menu-action" id="orgCreateBtn">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12"/></svg>
+          Create organization
+        </button>
+        <button class="org-menu-action" id="orgTeamBtn">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="2.5"/><path d="M2.5 16a4.5 4.5 0 019 0M13 5.5a2.5 2.5 0 010 5M14 16a4.5 4.5 0 00-2-3.7"/></svg>
+          Manage team
+        </button>
+        <button class="org-menu-action" id="orgAdminBtn" style="display:none">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2l6 3v4c0 4-2.5 7-6 9-3.5-2-6-5-6-9V5z"/><path d="M7.5 10l2 2 3.5-4"/></svg>
+          Admin Panel
+        </button>
+      </div>
+    </div>
+
+    <div class="conn" id="conn">
+      <span class="conn-dot" id="connDot"></span>
+      <span id="connLabel">Connecting…</span>
+    </div>
+    <div class="plan-pill" id="planPill"></div>
+    <nav class="nav">
+      <span class="nav-section-label">Workspace</span>
+      <button class="nav-btn active" data-view="chats">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6l-4 3V5z"/></svg>
+        <span>Chats</span>
+        <span class="nav-badge hidden" id="navUnreadBadge">0</span>
+      </button>
+      <button class="nav-btn" data-view="analytics">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17V3M3 17h14M7 14V9M11 14V6M15 14v-3"/></svg>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-btn" data-view="contacts">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="2.6"/><path d="M2.5 16a4.5 4.5 0 019 0M13.5 5.2a2.5 2.5 0 010 4.9M15 16a4.5 4.5 0 00-2.3-3.9"/></svg>
+        <span>Contacts</span>
+      </button>
+      <button class="nav-btn" data-view="pipeline">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="3" width="4" height="14" rx="1"/><rect x="8" y="3" width="4" height="9" rx="1"/><rect x="13.5" y="3" width="4" height="6" rx="1"/></svg>
+        <span>Pipeline</span>
+      </button>
+      <button class="nav-btn" data-view="bookings">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg>
+        <span>Bookings</span>
+      </button>
+      <button class="nav-btn" data-view="leads">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9a6 6 0 0112 0c0 4-6 8-6 8s-6-4-6-8z"/><circle cx="10" cy="9" r="2"/></svg>
+        <span>Lead Tools</span>
+      </button>
+      <span class="nav-section-label">Automation</span>
+      <button class="nav-btn" data-view="agents">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="8" r="3"/><path d="M4 17a6 6 0 0112 0"/><path d="M10 11v2m-2 2h4"/></svg>
+        <span>AI Agents</span>
+      </button>
+      <button class="nav-btn" data-view="rules">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V11M13 3h4m0 0v4m0-4L9 11"/></svg>
+        <span>Auto-replies</span>
+      </button>
+      <button class="nav-btn" data-view="flows">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="4" cy="10" r="2"/><circle cx="16" cy="4" r="2"/><circle cx="16" cy="16" r="2"/><path d="M6 10h4m2-4H8a2 2 0 00-2 2v4a2 2 0 002 2h4"/></svg>
+        <span>Flows</span>
+      </button>
+      <button class="nav-btn" data-view="templates">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="4" rx="1"/><rect x="3" y="10" width="8" height="3" rx="1"/><rect x="3" y="15" width="5" height="2" rx="1"/></svg>
+        <span>Templates</span>
+      </button>
+      <button class="nav-btn" data-view="sequences">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="4" r="1.8"/><circle cx="5" cy="10" r="1.8"/><circle cx="5" cy="16" r="1.8"/><path d="M5 5.8v2.4M5 11.8v2.4M9 4h7M9 10h7M9 16h5"/></svg>
+        <span>Follow-ups</span>
+      </button>
+      <button class="nav-btn" data-view="broadcasts">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8v4l3 .5 2 3.5h1.5V4.5H8.5L6 8 3 8z"/><path d="M13 6.5a4 4 0 010 7M15.5 4a7 7 0 010 12"/></svg>
+        <span>Broadcasts</span>
+      </button>
+      <span class="nav-section-label">Settings</span>
+      <button class="nav-btn" data-view="integrations">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 10a3 3 0 11-6 0 3 3 0 016 0zM4.5 7a6 6 0 0111 0M4.5 13a6 6 0 0011 0"/></svg>
+        <span>Integrations</span>
+      </button>
+      <button class="nav-btn" data-view="settings">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.2 4.2l1 1M14.8 14.8l1 1M15.8 4.2l-1 1M5.2 14.8l-1 1"/></svg>
+        <span>AI Settings</span>
+      </button>
+      <button class="nav-btn" data-view="branding" id="navBranding">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2.5l2 4.2 4.6.6-3.4 3.2.9 4.6L10 17l-4.1 2.1.9-4.6L3.4 7.3 8 6.7z"/></svg>
+        <span>Branding</span>
+      </button>
+      <button class="nav-btn" data-view="billing">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/></svg>
+        <span>Plan &amp; Billing</span>
+      </button>
+      <button class="nav-btn" id="guideBtn">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 14v-4M10 6.5v.5"/></svg>
+        <span>Guide</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logoutBtn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0"><path d="M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3M13 6l4 4-4 4M17 10H7"/></svg>
+        <span>Disconnect WhatsApp</span>
+      </button>
+      <button class="logout-btn" id="signoutBtn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0"><circle cx="10" cy="7" r="3"/><path d="M3 18a7 7 0 0114 0"/></svg>
+        <span>Sign out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ QR PAIRING BANNER ═══ -->
+  <div class="pairing-banner hidden" id="pairing">
+    <div class="pairing-banner-inner">
+      <div class="pairing-banner-left">
+        <div class="qr-frame-sm"><img id="qrImg" alt="QR code" style="width:90px;height:90px;object-fit:contain;" /></div>
+      </div>
+      <div class="pairing-banner-body">
+        <h2 style="font-size:15px;font-weight:700;margin:0 0 4px">Connect WhatsApp</h2>
+        <p style="font-size:12px;color:var(--ink-3);margin:0 0 8px">Open WhatsApp → Settings → <strong>Linked devices</strong> → <strong>Link a device</strong>, then scan the QR code.</p>
+        <p class="pairing-note" id="pairingNote" style="font-size:11.5px;color:var(--ink-4);margin:0 0 10px"></p>
+        <button class="primary-btn" id="connectBtn" style="padding:7px 18px;font-size:12px">Generate QR code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CHATS VIEW ═══ -->
+  <section class="view view-chats" id="view-chats">
+
+    <!-- Chat list panel -->
+    <div class="chat-list" id="chatList">
+      <div class="chat-list-header">
+        <span class="chat-list-title">Conversations</span>
+        <button class="chat-search-btn" id="newChatHeaderBtn" title="New chat">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12"/></svg>
+        </button>
+      </div>
+      <!-- Search -->
+      <div class="chat-search-wrap">
+        <svg class="chat-search-icon" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+        <input id="chatSearch" class="chat-search-input" type="text" placeholder="Search by name or number" autocomplete="off" />
+        <button id="chatSearchClear" class="chat-search-clear hidden" title="Clear search">×</button>
+      </div>
+      <!-- Filter bar -->
+      <div class="chat-filter-bar">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="unread">Unread</button>
+        </div>
+        <div class="filter-row">
+          <select class="chat-filter-select" id="lifecycleFilter" title="Filter by lifecycle stage">
+            <option value="">All stages</option>
+            <option value="new_lead">🆕 New Lead</option>
+            <option value="hot_lead">🔥 Hot Lead</option>
+            <option value="payment">💰 Payment</option>
+            <option value="customer">😊 Customer</option>
+            <option value="closed_won">🏆 Closed-Won</option>
+          </select>
+          <select class="chat-filter-select" id="tagFilter" title="Filter by tag">
+            <option value="">All tags</option>
+          </select>
+        </div>
+        <button class="filter-clear hidden" id="filterClear">Clear filters ✕</button>
+      </div>
+      <div id="chatItems">
+        <div class="empty">No conversations yet. When customers message you, they appear here.</div>
+      </div>
+    </div>
+
+    <!-- Conversation area -->
+    <div class="conversation">
+      <header class="conv-header" id="convHeader">
+        <div class="conv-header-left">
+          <div class="conv-header-avatar" id="convAvatar"></div>
+          <div>
+            <div class="conv-name" id="convName">Select a chat</div>
+            <div class="conv-meta-row">
+              <span class="conv-phone" id="convPhone"></span>
+              <span class="conv-jid-label" id="convJidLabel"></span>
+            </div>
+          </div>
+        </div>
+        <div class="conv-header-right" id="convHeaderRight">
+          <!-- Populated by JS when a chat is selected -->
+        </div>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+      <!-- Composer (WhatsApp-Web style) -->
+      <footer class="composer" id="composer">
+        <!-- Template picker popup -->
+        <div class="template-picker hidden" id="templatePicker"></div>
+        <!-- AI smart-reply suggestions -->
+        <div class="suggest-popover hidden" id="suggestPopover"></div>
+        <div class="composer-bar">
+          <!-- Attachment -->
+          <label class="comp-icon" title="Attach file" style="cursor:pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 11l-7.5 7.5a4.5 4.5 0 01-6.36-6.36l8-8a3 3 0 014.24 4.24l-8.01 8.01a1.5 1.5 0 01-2.12-2.12L12.5 8"/></svg>
+            <input type="file" id="fileInput" style="display:none" />
+          </label>
+          <!-- Template picker trigger -->
+          <button class="comp-icon" id="templateBtn" title="Insert template ( / )">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+          </button>
+          <!-- Input pill -->
+          <div class="comp-input-wrap">
+            <textarea id="composerInput" placeholder="Type a message" rows="1" autocomplete="off"></textarea>
+          </div>
+          <!-- AI suggest replies -->
+          <button class="comp-icon" id="suggestBtn" title="Suggest replies (AI)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a6 6 0 00-3.5 10.9c.3.2.5.6.5 1V16h6v-1.1c0-.4.2-.8.5-1A6 6 0 0012 3z"/><path d="M9 19h6M10 21h4"/></svg>
+          </button>
+          <!-- AI Assist -->
+          <button class="comp-icon ai-assist-btn" id="aiAssistBtn" title="AI Assist — polish your draft">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.2L20.4 10l-6.3 2.1L12 18.4l-2.1-6.3L3.6 10l6.3-1.8z"/><circle cx="19" cy="4.5" r="1.4"/></svg>
+          </button>
+          <!-- Send -->
+          <button class="comp-send" id="sendBtn" title="Send (Enter)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l17-8-3.8 15.5-4.3-5.2L18 6.6 9.3 13z"/></svg>
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Chat detail sidebar (tags, notes, lifecycle, agent) -->
+    <div class="chat-detail hidden" id="chatDetail">
+      <!-- Lifecycle -->
+      <div class="detail-section">
+        <div class="detail-section-title">Lifecycle Stage</div>
+        <select class="lifecycle-select" id="lifecycleSelect">
+          <option value="new_lead">🆕 New Lead</option>
+          <option value="hot_lead">🔥 Hot Lead</option>
+          <option value="payment">💰 Payment</option>
+          <option value="customer">😊 Customer</option>
+          <option value="closed_won">🏆 Closed-Won</option>
+        </select>
+      </div>
+      <!-- AI Agent assignment -->
+      <div class="detail-section">
+        <div class="detail-section-title">AI Agent</div>
+        <select class="agent-select" id="chatAgentSelect">
+          <option value="">— Use global settings —</option>
+        </select>
+      </div>
+      <!-- Quick actions -->
+      <div class="detail-section">
+        <div class="detail-section-title">Quick actions</div>
+        <div class="quick-actions">
+          <button class="qa-btn" id="qaSummarize"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h12M4 9h12M4 13h7"/></svg>Summarize chat</button>
+          <button class="qa-btn" id="qaPayment"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M2.5 8h15"/></svg>Request payment</button>
+          <button class="qa-btn" id="qaBooking"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg>Book appointment</button>
+        </div>
+        <div id="chatSummary" class="chat-summary hidden"></div>
+      </div>
+      <!-- Pipeline / Deal -->
+      <div class="detail-section">
+        <div class="detail-section-title">Pipeline</div>
+        <div id="chatDeal"></div>
+      </div>
+      <!-- Tags -->
+      <div class="detail-section">
+        <div class="detail-section-title">Tags</div>
+        <div class="tag-list" id="tagList"></div>
+        <div class="tag-input-row">
+          <input type="text" id="tagInput" placeholder="Add tag…" />
+          <button id="tagAddBtn">+</button>
+        </div>
+      </div>
+      <!-- Notes -->
+      <div class="detail-section" style="flex:1">
+        <div class="detail-section-title">Notes</div>
+        <div id="notesList"></div>
+        <div class="note-input-row">
+          <textarea id="noteInput" placeholder="Add a note…" rows="2"></textarea>
+          <button id="noteAddBtn">Add Note</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AI AGENTS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-agents">
+    <div class="panel panel-wide">
+      <h2>AI Agents</h2>
+      <p class="panel-sub">Create intelligent agents that handle conversations automatically. Each agent can have its own instructions, playbook, rules, and knowledge base — and its own OpenAI API key.</p>
+      <button class="primary-btn" id="newAgentBtn" style="margin-bottom:24px">+ Create agent</button>
+      <div id="agentList"><div class="empty">No agents yet.</div></div>
+
+      <!-- Industry starter packs -->
+      <h2 style="margin-top:36px">Industry starter packs</h2>
+      <p class="panel-sub">New here? Install a ready-made pack — it sets up an AI agent, message templates, and auto-replies tailored to your business in one click.</p>
+      <div id="packsList" class="packs-grid"></div>
+
+      <!-- Knowledge sources section -->
+      <h2 style="margin-top:36px">Knowledge Sources</h2>
+      <p class="panel-sub">Upload text files (.txt, .md, .csv) that your agents can learn from. The file content is injected into the agent's context during each conversation.</p>
+      <div id="knowledgeList"></div>
+      <label class="ks-upload-btn" style="cursor:pointer;margin-top:8px">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14V4M5 9l5-5 5 5"/><path d="M4 16h12"/></svg>
+        Upload knowledge file
+        <input type="file" id="ksFileInput" style="display:none" accept=".txt,.md,.csv,.json" />
+      </label>
+    </div>
+  </section>
+
+  <!-- ═══ TEMPLATES VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-templates">
+    <div class="panel">
+      <h2>Message Templates</h2>
+      <p class="panel-sub">Save your most-used messages as templates. In any chat, press <strong>/</strong> or click the template button to quickly insert one.</p>
+      <div class="rule-form" id="templateForm">
+        <input id="tplName" placeholder="Template name (e.g. Welcome message)" />
+        <input id="tplShortcut" placeholder="Shortcut (e.g. /welcome)" />
+        <textarea id="tplBody" placeholder="Template body… use {{name}}, {{phone}} as placeholders" rows="4"></textarea>
+        <button id="tplAdd">Save template</button>
+      </div>
+      <div id="templateList"></div>
+    </div>
+  </section>
+
+  <!-- ═══ ANALYTICS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-analytics">
+    <div class="an-page">
+      <div class="an-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <h2>Analytics</h2>
+          <p class="panel-sub" style="margin-bottom:0">Inbox performance, AI workload, and your sales funnel.</p>
+        </div>
+        <button class="primary-btn" id="reportBtn">⬇ Client report (PDF)</button>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- Charts -->
+      <div class="an-grid">
+        <div class="an-card an-card-area">
+          <div class="an-card-head">
+            <div>
+              <span class="an-eyebrow">Conversation activity</span>
+              <span class="an-sub2">Messages, last 14 days</span>
+            </div>
+            <div class="an-legend">
+              <span class="lg"><i class="lg-dot lg-in"></i>Received</span>
+              <span class="lg"><i class="lg-dot lg-out"></i>Sent</span>
+            </div>
+          </div>
+          <div class="an-area" id="anAreaChart"></div>
+        </div>
+        <div class="an-card an-card-donut">
+          <div class="an-card-head">
+            <div>
+              <span class="an-eyebrow">Reply sources</span>
+              <span class="an-sub2">Last 30 days</span>
+            </div>
+          </div>
+          <div class="an-donut" id="anDonut"></div>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="an-card">
+        <div class="an-card-head">
+          <div>
+            <span class="an-eyebrow">Lifecycle funnel</span>
+            <span class="an-sub2">Where your contacts stand</span>
+          </div>
+        </div>
+        <div class="an-funnel2" id="anFunnel"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONTACTS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-contacts">
+    <div class="contacts-page">
+      <div class="contacts-head">
+        <div>
+          <h2>Contacts</h2>
+          <p class="panel-sub" style="margin-bottom:0">Everyone from your chats, plus contacts you add. Click a row to open the chat.</p>
+        </div>
+        <div class="contacts-actions">
+          <input id="contactSearch" class="contacts-search" placeholder="Search contacts…" />
+          <button class="ghost-btn" id="contactFieldsBtn">+ Column</button>
+          <button class="ghost-btn" id="contactImportBtn">Import</button>
+          <button class="ghost-btn" id="contactExportBtn">Export</button>
+          <button class="primary-btn" id="contactAddBtn">+ Add contact</button>
+        </div>
+      </div>
+      <div class="contacts-table-wrap">
+        <table class="contacts-table" id="contactsTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PIPELINE VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-pipeline">
+    <div class="pipeline-page">
+      <div class="pipeline-head">
+        <div>
+          <h2>Pipeline</h2>
+          <p class="panel-sub" style="margin-bottom:0">Track deals and sales progress. Drag a card between stages.</p>
+        </div>
+        <div class="pipeline-actions">
+          <button class="ghost-btn" id="stageAddBtn">+ Stage</button>
+          <button class="primary-btn" id="dealAddBtn">+ Add Deal</button>
+        </div>
+      </div>
+      <div class="pipeline-board" id="pipelineBoard"></div>
+    </div>
+  </section>
+
+  <!-- ═══ BOOKINGS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-bookings">
+    <div class="panel panel-wide">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div><h2>Bookings</h2><p class="panel-sub" style="margin-bottom:0">Appointments with your customers. Confirmations and reminders are sent on WhatsApp automatically.</p></div>
+        <button class="primary-btn" id="apptAddBtn">+ New booking</button>
+      </div>
+      <div id="bookingsList" class="bookings-list"></div>
+    </div>
+  </section>
+
+  <!-- ═══ LEAD TOOLS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-leads">
+    <div class="panel panel-wide">
+      <h2>Click-to-WhatsApp Lead Tools</h2>
+      <p class="panel-sub">Turn your number into a lead magnet. Create a tracked link, QR code, or website button — every chat that comes in gets tagged with its source automatically.</p>
+      <div id="leadNumberNote" class="info-note" style="display:none"></div>
+      <div class="lead-grid">
+        <div class="lead-builder">
+          <div class="rule-form">
+            <label class="field"><span>Campaign / source name</span><input id="leadName" placeholder="e.g. Instagram Bio, Facebook Ad" /></label>
+            <label class="field"><span>Pre-filled message <small>what the customer's chat opens with</small></span><textarea id="leadPrefill" rows="2" placeholder="Hi! I'm interested in…"></textarea></label>
+            <button class="primary-btn" id="leadCreate">Generate link &amp; QR</button>
+          </div>
+          <div id="leadOutput" class="lead-output hidden"></div>
+        </div>
+        <div class="lead-sources">
+          <h3 class="seq-subhead" style="margin-top:0">Your tracked sources</h3>
+          <div id="leadSourceList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FOLLOW-UP SEQUENCES VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-sequences">
+    <div class="panel panel-wide">
+      <h2>Follow-up Sequences</h2>
+      <p class="panel-sub">Automatically nudge leads who go quiet. Set up a drip of timed messages — when someone replies, the sequence stops so you never nag a live conversation. Use <strong>{{first_name}}</strong> to personalize.</p>
+      <button id="newSequenceBtn" class="primary-btn">+ New sequence</button>
+      <div id="sequenceList" class="seq-list"></div>
+    </div>
+  </section>
+
+  <!-- ═══ BROADCASTS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-broadcasts">
+    <div class="panel panel-wide">
+      <h2>Broadcast Campaigns</h2>
+      <p class="panel-sub">Send a message to a whole segment at once — sent gradually (ban-safe throttling) so your number stays healthy. Great for re-activation and announcements.</p>
+      <div class="rule-form" id="broadcastForm">
+        <input id="bcName" placeholder="Campaign name (e.g. June reactivation)" />
+        <div class="bc-segment-row">
+          <select id="bcSegment">
+            <option value="all">Everyone</option>
+            <option value="lifecycle">By lifecycle stage</option>
+            <option value="tag">By tag</option>
+            <option value="unread">Unread chats</option>
+          </select>
+          <select id="bcSegmentValue" class="hidden">
+            <option value="new_lead">🆕 New Lead</option>
+            <option value="hot_lead">🔥 Hot Lead</option>
+            <option value="payment">💰 Payment</option>
+            <option value="customer">😊 Customer</option>
+            <option value="closed_won">🏆 Closed-Won</option>
+          </select>
+          <input id="bcTagValue" class="hidden" placeholder="tag name" />
+          <span class="bc-count" id="bcCount">—</span>
+        </div>
+        <textarea id="bcBody" placeholder="Message… use {{first_name}} to personalize" rows="4"></textarea>
+        <div class="bc-actions">
+          <button id="bcSend" class="primary-btn">Send broadcast</button>
+          <span class="bc-hint">Messages send ~8/min to stay safe.</span>
+        </div>
+      </div>
+      <h3 class="seq-subhead">Recent campaigns</h3>
+      <div id="broadcastList"></div>
+    </div>
+  </section>
+
+  <!-- ═══ AUTO-REPLIES VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-rules">
+    <div class="panel">
+      <h2>Keyword auto-replies</h2>
+      <p class="panel-sub">These fire instantly before the AI — use them for prices, hours, location. Zero cost per trigger.</p>
+      <div class="rule-form">
+        <input id="ruleKeyword" placeholder="Keyword (e.g. price)" />
+        <select id="ruleMatch">
+          <option value="contains">message contains</option>
+          <option value="exact">message is exactly</option>
+          <option value="starts">message starts with</option>
+        </select>
+        <textarea id="ruleReply" placeholder="Reply to send…" rows="3"></textarea>
+        <button id="ruleAdd">Add rule</button>
+      </div>
+      <div id="ruleList"></div>
+    </div>
+  </section>
+
+  <!-- ═══ AI SETTINGS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-settings">
+    <div class="panel">
+      <h2>AI assistant settings</h2>
+      <div class="info-note">These are your <strong>generic fallback</strong> settings — used only when you haven't created any <strong>AI Agents</strong>. As soon as you create an agent, conversations use that agent instead. Assign a specific agent per chat from the chat panel.</div>
+      <label class="ai-toggle big">
+        <input type="checkbox" id="aiGlobal" />
+        <span>AI auto-replies enabled (master switch)</span>
+      </label>
+      <label class="field">
+        <span>Business instructions — describe your business, products, prices, and tone</span>
+        <textarea id="aiPrompt" rows="10"></textarea>
+      </label>
+      <label class="field">
+        <span>Handoff keywords (comma separated) — AI stays silent so you can reply manually</span>
+        <input id="aiHandoff" />
+      </label>
+      <button id="settingsSave">Save settings</button>
+      <p class="saved-note hidden" id="savedNote">Saved.</p>
+    </div>
+  </section>
+
+  <!-- ═══ BRANDING (white-label) VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-branding">
+    <div class="panel panel-wide">
+      <h2>Branding &amp; White-label</h2>
+      <p class="panel-sub">Make this inbox your own. Change the name, logo, and color your clients see — perfect for reselling under your agency brand.</p>
+
+      <div class="brand-layout">
+        <div class="brand-form">
+          <label class="field"><span>App name</span><input id="bvName" placeholder="InboxAI" /></label>
+
+          <div class="field">
+            <span>Logo</span>
+            <div class="brand-logo-row">
+              <div class="brand-logo-preview" id="bvLogoPreview"><span>No logo</span></div>
+              <div class="brand-logo-actions">
+                <label class="ghost-btn" style="cursor:pointer">Upload<input type="file" id="bvLogoFile" accept="image/*" style="display:none" /></label>
+                <button class="ghost-btn" id="bvLogoRemove">Remove</button>
+                <p class="field-hint">PNG or SVG, transparent background works best.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <span>Brand color</span>
+            <div class="brand-swatches" id="bvSwatches"></div>
+            <div class="brand-hue-row">
+              <input type="range" id="bvHue" min="0" max="360" step="1" />
+              <span class="brand-hue-chip" id="bvHueChip"></span>
+            </div>
+          </div>
+
+          <label class="field"><span>Login page subtitle</span><input id="bvSubtitle" placeholder="Sign in to your WhatsApp AI inbox." /></label>
+
+          <label class="toggle-field">
+            <input type="checkbox" id="bvPoweredBy" />
+            <span>Show "Powered by InboxAI" on the login page</span>
+          </label>
+
+          <label class="field"><span>Custom domain <small>optional</small></span><input id="bvDomain" placeholder="inbox.youragency.com" /></label>
+          <p class="field-hint">Point a CNAME record for this domain to your server, then your clients see your branded login at that address.</p>
+
+          <button class="primary-btn" id="bvSave">Save branding</button>
+          <span class="saved-note hidden" id="bvSaved">Saved ✓</span>
+        </div>
+
+        <div class="brand-preview">
+          <div class="brand-preview-label">Live preview</div>
+          <div class="brand-preview-card" id="bvPreviewCard">
+            <div class="bp-sidebar">
+              <div class="bp-brand"><span class="bp-logo" id="bpLogo"></span><span id="bpName">InboxAI</span></div>
+              <div class="bp-nav"><span class="bp-nav-item active"></span><span class="bp-nav-item"></span><span class="bp-nav-item"></span></div>
+              <div class="bp-btn" id="bpBtn">Button</div>
+            </div>
+            <div class="bp-content">
+              <div class="bp-bubble in"></div>
+              <div class="bp-bubble out" id="bpBubble"></div>
+              <div class="bp-bubble in short"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FLOWS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-flows">
+    <div class="flow-page">
+      <div class="flow-page-head">
+        <div>
+          <h2>Flow builder</h2>
+          <p class="panel-sub" style="margin-bottom:0">Build automated conversations by connecting modules — like Lego blocks. A trigger starts the flow, then each module runs in order.</p>
+        </div>
+        <div class="flow-toolbar">
+          <select id="flowSelect" class="hidden"></select>
+          <button id="flowNew" class="primary-btn">+ New flow</button>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="flowEmpty" class="flow-empty">
+        <div class="flow-empty-art">🧩</div>
+        <h3>No flows yet</h3>
+        <p>Flows let you auto-reply with smart, multi-step conversations — greet customers, ask what they need, and route them.</p>
+        <button class="primary-btn" id="flowNewEmpty">+ Create your first flow</button>
+      </div>
+
+      <!-- Editor -->
+      <div id="flowEditor" class="hidden flow-editor">
+        <div class="flow-editor-bar">
+          <input id="flowName" class="flow-name-input" placeholder="Untitled flow" />
+          <div class="flow-actions">
+            <span class="saved-note hidden" id="flowSaved">Saved ✓</span>
+            <button id="flowToggle" class="ghost-btn"></button>
+            <button id="flowDelete" class="danger-btn">Delete</button>
+            <button id="flowSave" class="primary-btn">Save flow</button>
+          </div>
+        </div>
+        <div class="flow-canvas-scroll">
+          <div id="flowCanvas" class="flow-canvas"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ INTEGRATIONS VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-integrations">
+    <div class="panel">
+      <h2>Integrations</h2>
+      <p class="panel-sub">Connect InboxAI to Make.com, Zapier, n8n, or your own systems.</p>
+
+      <div class="integration-card">
+        <h3>→ Outgoing webhook</h3>
+        <p>We POST to your URL whenever a customer messages you (<code>message.received</code>) or requests a human (<code>handoff.requested</code>).</p>
+        <div class="int-row">
+          <input id="webhookUrl" placeholder="https://hook.eu1.make.com/…" />
+          <button id="webhookSave">Save</button>
+        </div>
+        <pre class="code-sample">{ "event": "message.received", "jid": "923001234567@s.whatsapp.net", "name": "Ali", "text": "price?", "ts": 1718000000000 }</pre>
+      </div>
+
+      <div class="integration-card">
+        <h3>← Inbound webhook (send messages from Make.com / Zapier)</h3>
+        <p>POST to <code>/api/v1/inbound</code> with your API key to send a WhatsApp message to any number — perfect for appointment confirmations, order updates, etc.</p>
+        <pre class="code-sample">POST /api/v1/inbound
+X-API-Key: wak_xxxxx
+{
+  "to": "+17162145420",
+  "message": "Hi! Your appointment is confirmed for Friday at 3pm ✅"
+}
+
+# Or use a saved template with dynamic data:
+{
+  "to": "+17162145420",
+  "template_name": "appointment_confirm",
+  "data": { "name": "Hassan", "date": "Friday 3pm" }
+}</pre>
+      </div>
+
+      <div class="integration-card">
+        <h3>← Send API (single message)</h3>
+        <p>Send a WhatsApp message from any tool using one HTTP request.</p>
+        <div class="int-row">
+          <input id="apiKeyField" readonly placeholder="No API key yet" />
+          <button id="apiKeyGen">Generate key</button>
+        </div>
+        <pre class="code-sample">POST /api/v1/send
+X-API-Key: wak_xxxxx
+{ "to": "923001234567", "text": "Your order is confirmed ✅" }</pre>
+        <p class="int-warn">⚠ Treat the API key like a password. Regenerating replaces the old key instantly.</p>
+      </div>
+
+      <div class="integration-card">
+        <h3>📖 Public API — TimelinesAI-compatible endpoints</h3>
+        <p>Full REST API for reading and managing chats:</p>
+        <pre class="code-sample">GET  /api/v1/chats                    # List all chats
+GET  /api/v1/chats/:jid/messages      # Chat message history
+POST /api/v1/send                     # Send message
+POST /api/v1/inbound                  # Inbound webhook trigger
+PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
+      </div>
+
+      <div class="integration-card">
+        <h3>🛍 E-commerce — abandoned cart recovery</h3>
+        <p>Recover lost sales automatically. Send this webhook from Shopify, WooCommerce, or any store when a cart is abandoned — your customer gets a friendly WhatsApp nudge.</p>
+        <div class="int-row">
+          <input id="ecomWebhook" readonly />
+          <button id="ecomCopy">Copy</button>
+        </div>
+        <pre class="code-sample" id="ecomSample">POST /api/v1/ecommerce/abandoned-cart</pre>
+        <p class="int-warn">Use your API key (above) in the <code>X-API-Key</code> header.</p>
+      </div>
+
+      <div class="integration-card">
+        <h3>💳 Payments — Stripe</h3>
+        <p>Connect your Stripe account to send real payment links in chat. Without it, payment links run in demo mode.</p>
+        <div class="int-row">
+          <input id="stripeKey" type="password" placeholder="sk_live_… (your Stripe secret key)" />
+          <button id="stripeSave" class="primary-btn">Save</button>
+        </div>
+        <p class="int-warn" id="stripeStatus"></p>
+      </div>
+
+      <div class="integration-card">
+        <h3>New chat — send to any number</h3>
+        <p>Send a WhatsApp message to a number not yet in your inbox.</p>
+        <div class="send-phone-row">
+          <input id="newChatPhone" placeholder="+17162145420" />
+          <input id="newChatText" placeholder="Message text…" style="flex:2" />
+          <button id="newChatSend" class="primary-btn" style="flex-shrink:0">Send</button>
+        </div>
+      </div>
+
+      <div class="integration-card">
+        <h3>Make.com quick start (2 minutes)</h3>
+        <ol class="int-steps">
+          <li>Create a scenario with <strong>Webhooks → Custom webhook</strong>. Copy its URL, paste above and Save.</li>
+          <li>Send a test WhatsApp message — Make captures the data structure.</li>
+          <li>Add modules (Sheets, CRM, Slack…). To reply, add <strong>HTTP → Make a request</strong> with the Inbound Webhook endpoint.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BILLING VIEW ═══ -->
+  <section class="view view-panel hidden" id="view-billing">
+    <div class="panel">
+      <h2>Plan &amp; billing</h2>
+      <p class="panel-sub" id="billingStatus"></p>
+      <div class="plans" id="plansGrid">
+        <div class="plan-card" data-plan="starter">
+          <h3>Starter</h3><div class="plan-price">$29<span>/mo</span></div>
+          <ul><li>1 WhatsApp number</li><li>Unlimited keyword auto-replies</li><li>300 automated conversations/mo</li></ul>
+          <button>Choose Starter</button>
+        </div>
+        <div class="plan-card featured" data-plan="pro">
+          <h3>Pro</h3><div class="plan-price">$49<span>/mo</span></div>
+          <ul><li>Everything in Starter</li><li>1,500 automated conversations/mo</li><li>Flow builder + integrations</li><li>Priority support</li></ul>
+          <button>Choose Pro</button>
+        </div>
+        <div class="plan-card" data-plan="agency">
+          <h3>Agency</h3><div class="plan-price">$199<span>/mo</span></div>
+          <ul><li>Unlimited conversations</li><li>White-label ready</li><li>Resell to your clients</li></ul>
+          <button>Choose Agency</button>
+        </div>
+      </div>
+      <button id="portalBtn" class="portal-btn hidden">Manage subscription</button>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<!-- ═══ ONBOARDING TOUR ═══ -->
+<div class="tour hidden" id="tour">
+  <div class="tour-card">
+    <div class="tour-art" id="tourArt"></div>
+    <h3 id="tourTitle"></h3>
+    <p id="tourText"></p>
+    <div class="tour-dots" id="tourDots"></div>
+    <div class="tour-nav">
+      <button class="ghost-btn" id="tourSkip">Skip</button>
+      <button class="primary-btn" id="tourNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AGENT EDITOR MODAL ═══ -->
+<div class="modal-overlay hidden" id="agentModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title" id="agentModalTitle">Create AI Agent</span>
+      <button class="modal-close" id="agentModalClose">×</button>
+    </div>
+    <input type="hidden" id="agentModalId" value="" />
+
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Emoji</label>
+        <input id="agentEmoji" placeholder="🤖" style="font-size:22px;width:70px" />
+      </div>
+      <div class="modal-field" style="flex:1">
+        <label>Agent name <span>shown in chat header</span></label>
+        <input id="agentName" placeholder="e.g. Sales Agent" />
+      </div>
+    </div>
+
+    <div class="modal-field">
+      <label>Instructions <span>describe role, communication style, and goals</span></label>
+      <textarea id="agentInstructions" rows="5" placeholder="You are a friendly sales agent for [Company]. Your job is to..."></textarea>
+    </div>
+
+    <div class="modal-field">
+      <label>Agent Playbook <span>step-by-step conversation guide</span></label>
+      <textarea id="agentPlaybook" rows="4" placeholder="1. Greet the customer warmly&#10;2. Ask about their needs&#10;3. Recommend the right product or plan&#10;4. Handle objections with empathy&#10;5. Close or hand off to human"></textarea>
+    </div>
+
+    <div class="modal-field">
+      <label>Additional Rules <span>constraints the agent must follow</span></label>
+      <textarea id="agentRules" rows="3" placeholder="- Never quote prices more than 10% off standard rate&#10;- Always respond in the same language as the customer&#10;- Never make delivery promises"></textarea>
+    </div>
+
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>OpenAI API Key <span>overrides global key</span></label>
+        <input id="agentApiKey" type="password" placeholder="sk-…" autocomplete="off" />
+        <div class="field-hint">Get your key at <strong>platform.openai.com/api-keys</strong>. This key is stored encrypted and only used for this agent's replies.</div>
+      </div>
+      <div class="modal-field">
+        <label>Model</label>
+        <select id="agentModel" class="model-select">
+          <option value="gpt-4o-mini">gpt-4o-mini (fast, cheap)</option>
+          <option value="gpt-4o">gpt-4o (best quality)</option>
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</option>
+        </select>
+        <div class="field-hint">gpt-4o-mini is recommended for most use cases — great quality at low cost.</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="ghost-btn" id="agentModalCancel">Cancel</button>
+      <button class="primary-btn" id="agentModalSave">Save agent</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NEW CHAT MODAL ═══ -->
+<div class="modal-overlay hidden" id="newChatModal">
+  <div class="modal-card" style="width:440px">
+    <div class="modal-header">
+      <span class="modal-title">Send to a new number</span>
+      <button class="modal-close" id="newChatModalClose">×</button>
+    </div>
+    <div class="modal-field">
+      <label>Phone number <span>include country code</span></label>
+      <input id="ncPhone" placeholder="+17162145420" />
+    </div>
+    <div class="modal-field">
+      <label>Message</label>
+      <textarea id="ncText" rows="4" placeholder="Your appointment is confirmed for…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="newChatModalCancel">Cancel</button>
+      <button class="primary-btn" id="newChatModalSend">Send message</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEQUENCE EDITOR MODAL ═══ -->
+<div class="modal-overlay hidden" id="sequenceModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title" id="seqModalTitle">New follow-up sequence</span>
+      <button class="modal-close" id="seqModalClose">×</button>
+    </div>
+    <input type="hidden" id="seqModalId" />
+    <div class="modal-field">
+      <label>Sequence name</label>
+      <input id="seqName" placeholder="e.g. New lead nurture" />
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Start this sequence when…</label>
+        <select id="seqTrigger">
+          <option value="manual">I enroll a contact manually</option>
+          <option value="lifecycle">A chat enters a lifecycle stage</option>
+          <option value="no_reply">A chat goes quiet (no reply)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label id="seqTriggerValLabel">Lifecycle stage</label>
+        <select id="seqTriggerValLifecycle">
+          <option value="new_lead">🆕 New Lead</option>
+          <option value="hot_lead">🔥 Hot Lead</option>
+          <option value="payment">💰 Payment</option>
+          <option value="customer">😊 Customer</option>
+          <option value="closed_won">🏆 Closed-Won</option>
+        </select>
+        <input id="seqTriggerValHours" class="hidden" type="number" min="1" value="24" placeholder="hours" />
+      </div>
+    </div>
+    <div class="seq-steps-label">Steps <span>messages send in order, each after its delay</span></div>
+    <div id="seqSteps"></div>
+    <button class="ghost-btn" id="seqAddStep" style="margin-top:8px">+ Add step</button>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="seqModalCancel">Cancel</button>
+      <button class="primary-btn" id="seqModalSave">Save sequence</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CREATE ORGANIZATION MODAL ═══ -->
+<div class="modal-overlay hidden" id="orgCreateModal">
+  <div class="modal-card" style="width:440px">
+    <div class="modal-header">
+      <span class="modal-title">New organization</span>
+      <button class="modal-close" id="orgCreateClose">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-3);line-height:1.6;margin-bottom:16px">Each organization gets its own WhatsApp number, inbox, AI agents, and plan. You'll connect its WhatsApp right after.</p>
+    <div class="modal-field">
+      <label>Organization name</label>
+      <input id="orgCreateName" placeholder="e.g. Acme Co — Support" />
+    </div>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="orgCreateCancel">Cancel</button>
+      <button class="primary-btn" id="orgCreateSave">Create & switch</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TEAM MANAGEMENT MODAL ═══ -->
+<div class="modal-overlay hidden" id="teamModal">
+  <div class="modal-card" style="width:560px">
+    <div class="modal-header">
+      <span class="modal-title">Team — <span id="teamOrgName"></span></span>
+      <button class="modal-close" id="teamClose">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-3);line-height:1.6;margin-bottom:8px">People with access to this organization. Each has their own login.</p>
+    <div id="teamList" class="team-list"></div>
+
+    <div id="teamAddWrap">
+      <div class="team-add-title">Add a team member</div>
+      <div class="team-add-form">
+        <input id="teamEmail" type="email" placeholder="email@company.com" />
+        <input id="teamPassword" type="text" placeholder="set a starting password (8+ chars)" />
+        <select id="teamRole">
+          <option value="agent">Agent — handle chats</option>
+          <option value="admin">Admin — manage team & settings</option>
+        </select>
+        <button class="primary-btn" id="teamAddBtn">Add member</button>
+      </div>
+      <p class="team-add-hint">They sign in with this email & password. Share the credentials with them — InboxAI doesn't send emails yet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTACT EDITOR MODAL ═══ -->
+<div class="modal-overlay hidden" id="contactModal">
+  <div class="modal-card" style="width:520px">
+    <div class="modal-header">
+      <span class="modal-title" id="contactModalTitle">Add contact</span>
+      <button class="modal-close" id="contactModalClose">×</button>
+    </div>
+    <input type="hidden" id="contactModalId" />
+    <div class="modal-row">
+      <div class="modal-field"><label>Name</label><input id="cf_name" placeholder="Jane Doe" /></div>
+      <div class="modal-field"><label>Phone <span>with country code</span></label><input id="cf_phone" placeholder="+14155551234" /></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Email</label><input id="cf_email" type="email" placeholder="jane@example.com" /></div>
+      <div class="modal-field"><label>Company</label><input id="cf_company" placeholder="Acme Co" /></div>
+    </div>
+    <div class="modal-field"><label>Notes</label><textarea id="cf_notes" rows="2" placeholder="Anything useful about this contact…"></textarea></div>
+    <div id="cf_custom"></div>
+    <div class="modal-footer">
+      <button class="danger-btn hidden" id="contactDeleteBtn" style="margin-right:auto">Delete</button>
+      <button class="ghost-btn" id="contactCancelBtn">Cancel</button>
+      <button class="primary-btn" id="contactSaveBtn">Save contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CUSTOM FIELDS MODAL ═══ -->
+<div class="modal-overlay hidden" id="fieldsModal">
+  <div class="modal-card" style="width:460px">
+    <div class="modal-header">
+      <span class="modal-title">Contact columns</span>
+      <button class="modal-close" id="fieldsModalClose">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-3);margin-bottom:14px">Add custom columns (e.g. Country, Birthday, Plan) to store more details per contact.</p>
+    <div id="fieldsList" class="fields-list"></div>
+    <div class="fields-add">
+      <input id="newFieldLabel" placeholder="Column name (e.g. Country)" />
+      <select id="newFieldType">
+        <option value="text">Text</option>
+        <option value="number">Number</option>
+        <option value="date">Date</option>
+        <option value="url">Link</option>
+      </select>
+      <button class="primary-btn" id="addFieldBtn">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ IMPORT CONTACTS MODAL ═══ -->
+<div class="modal-overlay hidden" id="importModal">
+  <div class="modal-card" style="width:480px">
+    <div class="modal-header">
+      <span class="modal-title">Import contacts</span>
+      <button class="modal-close" id="importModalClose">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-3);line-height:1.6;margin-bottom:14px">Upload a CSV with columns <strong>Name, Phone, Email, Company, Notes</strong>. Existing contacts (matched by phone or email) are updated.</p>
+    <a id="downloadSampleBtn" class="help-link" style="font-size:13px;cursor:pointer">⬇ Download sample CSV</a>
+    <label class="import-drop" id="importDrop">
+      <input type="file" id="importFile" accept=".csv,text/csv" style="display:none" />
+      <span id="importDropText">Click to choose a CSV file</span>
+    </label>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="importCancelBtn">Cancel</button>
+      <button class="primary-btn" id="importRunBtn">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DEAL EDITOR MODAL ═══ -->
+<div class="modal-overlay hidden" id="dealModal">
+  <div class="modal-card" style="width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="dealModalTitle">Add deal</span>
+      <button class="modal-close" id="dealModalClose">×</button>
+    </div>
+    <input type="hidden" id="dealModalId" />
+    <div class="modal-field"><label>Deal title</label><input id="df_title" placeholder="e.g. Website project" /></div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Contact name</label><input id="df_contact" placeholder="John Smith" /></div>
+      <div class="modal-field"><label>Stage</label><select id="df_stage"></select></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Value</label><input id="df_value" type="number" placeholder="7800" /></div>
+      <div class="modal-field"><label>Currency</label>
+        <select id="df_currency">
+          <option>USD</option><option>EUR</option><option>GBP</option><option>PKR</option><option>AED</option><option>INR</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="danger-btn hidden" id="dealDeleteBtn" style="margin-right:auto">Delete</button>
+      <button class="ghost-btn" id="dealCancelBtn">Cancel</button>
+      <button class="primary-btn" id="dealSaveBtn">Save deal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BOOKING MODAL ═══ -->
+<div class="modal-overlay hidden" id="apptModal">
+  <div class="modal-card" style="width:480px">
+    <div class="modal-header"><span class="modal-title" id="apptTitle">New booking</span><button class="modal-close" id="apptClose">×</button></div>
+    <input type="hidden" id="apptId" />
+    <div class="modal-field"><label>Title / service</label><input id="apptName" placeholder="e.g. Haircut, Consultation" /></div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Customer name</label><input id="apptContact" placeholder="Maria Garcia" /></div>
+      <div class="modal-field"><label>Phone <span>to send confirmation</span></label><input id="apptPhone" placeholder="+14155551234" /></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Date &amp; time</label><input id="apptWhen" type="datetime-local" /></div>
+      <div class="modal-field"><label>Duration (min)</label><input id="apptDuration" type="number" value="30" /></div>
+    </div>
+    <div class="modal-field"><label>Notes</label><textarea id="apptNotes" rows="2"></textarea></div>
+    <label class="toggle-field"><input type="checkbox" id="apptConfirm" checked /><span>Send WhatsApp confirmation now</span></label>
+    <div class="modal-footer">
+      <button class="danger-btn hidden" id="apptDelete" style="margin-right:auto">Delete</button>
+      <button class="ghost-btn" id="apptCancel">Cancel</button>
+      <button class="primary-btn" id="apptSave">Save booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAYMENT REQUEST MODAL ═══ -->
+<div class="modal-overlay hidden" id="payModal">
+  <div class="modal-card" style="width:440px">
+    <div class="modal-header"><span class="modal-title">Request payment</span><button class="modal-close" id="payClose">×</button></div>
+    <p style="font-size:13px;color:var(--ink-3);line-height:1.6;margin-bottom:14px">Send a secure payment link in this chat. <span id="payStripeNote"></span></p>
+    <input type="hidden" id="payJid" />
+    <div class="modal-field"><label>What's it for?</label><input id="payDesc" placeholder="e.g. Booking deposit" /></div>
+    <div class="modal-row">
+      <div class="modal-field"><label>Amount</label><input id="payAmount" type="number" placeholder="250" /></div>
+      <div class="modal-field"><label>Currency</label><select id="payCurrency"><option>USD</option><option>EUR</option><option>GBP</option><option>PKR</option><option>AED</option><option>INR</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="payCancel">Cancel</button>
+      <button class="primary-btn" id="paySend">Send payment link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CLIENT DETAILS DRAWER ═══ -->
+<div class="drawer-overlay hidden" id="clientDrawer">
+  <div class="client-panel">
+    <button class="client-close" id="clientClose">×</button>
+    <div id="clientBody"></div>
+  </div>
+</div>
+
+<!-- ═══ MODULE PALETTE (add a flow module) ═══ -->
+<div class="modal-overlay hidden" id="modulePalette">
+  <div class="modal module-palette">
+    <div class="modal-header">
+      <span class="modal-title">Add a module</span>
+      <button class="modal-close" id="paletteClose">×</button>
+    </div>
+    <div class="palette-grid" id="paletteGrid"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

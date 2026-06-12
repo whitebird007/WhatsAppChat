@@ -1,0 +1,24 @@
+{
+  "name": "whatsapp-ai-portal",
+  "version": "0.2.0",
+  "description": "Self-hosted WhatsApp inbox with AI auto-replies. Connect via QR scan, chat from a web portal, automate with keyword rules + LLM.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "multer": "^2.1.1",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4",
+    "stripe": "^17.0.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

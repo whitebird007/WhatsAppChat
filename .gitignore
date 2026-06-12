@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit
+.env
+
+# Runtime data — must NOT overwrite what's on the server
+data.sqlite
+data.sqlite-shm
+data.sqlite-wal
+auth/
+
+# Uploaded white-label logos (per-org, lives on the server)
+public/branding/
+
+# Dev helpers / logs
+public/autologin.html
+*.log
+.DS_Store
+
+# Editor / tooling
+.claude/

@@ -1,0 +1,27 @@
+# Replit configuration
+# IMPORTANT: this app needs Node >= 22.5 (uses the built-in node:sqlite).
+modules = ["nodejs-22"]
+
+entrypoint = "src/server.js"
+run = "npm start"
+
+hidden = [".config", "node_modules"]
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+NODE_ENV = "production"
+
+# Web port mapping
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+# Deployment: choose "Reserved VM" in the Deploy dialog.
+# A Reserved VM has a PERSISTENT disk + always-on process, which this app
+# requires (SQLite data file + WhatsApp session files + WebSockets).
+# Do NOT use Autoscale — it is stateless and would wipe data / drop WhatsApp.
+[deployment]
+run = ["npm", "start"]
+build = ["npm", "install"]

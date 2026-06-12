@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Application Admin — InboxAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<style>
+  body { background: var(--surface); }
+  #admin { display: flex; min-height: 100vh; }
+  .ad-side { width: 240px; flex-shrink: 0; background: oklch(0.13 0.02 265); color: #fff; display: flex; flex-direction: column; padding: 18px 14px; position: sticky; top: 0; height: 100vh; }
+  .ad-brand { display: flex; align-items: center; gap: 9px; padding: 6px 8px 18px; font-weight: 800; font-size: 16px; }
+  .ad-badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; background: oklch(0.55 0.18 280); color: #fff; padding: 2px 7px; border-radius: 999px; }
+  .ad-nav { display: flex; flex-direction: column; gap: 3px; }
+  .ad-nav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 9px; background: none; border: none; color: oklch(0.75 0.02 265); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.12s, color 0.12s; }
+  .ad-nav button:hover { background: oklch(1 0 0 / 0.06); color: #fff; }
+  .ad-nav button.active { background: oklch(0.55 0.18 280); color: #fff; }
+  .ad-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+  .ad-side-foot a, .ad-side-foot button { color: oklch(0.7 0.02 265); font-size: 12.5px; text-decoration: none; padding: 8px 12px; border-radius: 8px; background: none; border: none; font: inherit; text-align: left; cursor: pointer; }
+  .ad-side-foot a:hover, .ad-side-foot button:hover { background: oklch(1 0 0 / 0.06); color: #fff; }
+  .ad-main { flex: 1; padding: 30px 38px; max-width: 1200px; overflow-x: hidden; }
+  .ad-h { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .ad-sub { font-size: 13.5px; color: var(--ink-3); margin-bottom: 24px; }
+  .ad-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .ad-kpi { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; }
+  .ad-kpi-label { font-family: ui-monospace, monospace; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-4); }
+  .ad-kpi-val { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .ad-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px 22px; margin-bottom: 18px; }
+  .ad-card-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  table.ad-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.ad-tbl th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-4); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.ad-tbl td { padding: 11px 12px; border-bottom: 1px solid var(--line-2); color: var(--ink-2); white-space: nowrap; }
+  table.ad-tbl tr:last-child td { border-bottom: none; }
+  .ad-pill { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: capitalize; }
+  .ad-pill.active { color: var(--brand-700, var(--brand-600)); background: var(--brand-50); }
+  .ad-pill.suspended { color: var(--danger); background: oklch(0.95 0.04 27); }
+  .ad-pill.trial { color: var(--ink-3); background: var(--surface); }
+  .ad-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  .ad-dot.on { background: var(--success); } .ad-dot.off { background: var(--ink-4); }
+  .ad-btn { font-family: inherit; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); cursor: pointer; margin-left: 5px; }
+  .ad-btn:hover { border-color: var(--brand-400); color: var(--brand-600); }
+  .ad-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  .ad-btn.primary { background: var(--brand-600); color: #fff; border-color: var(--brand-600); }
+  .ad-btn.primary:hover { background: var(--brand-500); color: #fff; }
+  .ad-tbl select { font: inherit; font-size: 12.5px; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); }
+  .ad-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .ad-plan { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; }
+  .ad-plan h4 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .ad-field { margin-bottom: 12px; }
+  .ad-field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--ink-3); margin-bottom: 5px; }
+  .ad-field input, .ad-field select { width: 100%; font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+  .ad-toggle { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+  .ad-loading { color: var(--ink-4); padding: 40px; text-align: center; }
+  .ad-mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div id="admin">
+  <aside class="ad-side">
+    <div class="ad-brand">InboxAI <span class="ad-badge">Admin</span></div>
+    <nav class="ad-nav" id="adNav">
+      <button data-sec="overview" class="active">Overview</button>
+      <button data-sec="agencies">Agencies</button>
+      <button data-sec="users">Users</button>
+      <button data-sec="plans">Plans &amp; Tiers</button>
+      <button data-sec="settings">Global Settings</button>
+    </nav>
+    <div class="ad-side-foot">
+      <span class="ad-mono" id="adWho" style="padding:8px 12px"></span>
+      <a href="/">← Back to app</a>
+      <button id="adLogout">Sign out</button>
+    </div>
+  </aside>
+  <main class="ad-main" id="adMain"><div class="ad-loading">Loading…</div></main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="admin.js"></script>
+</body>
+</html>
