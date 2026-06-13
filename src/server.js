@@ -1553,7 +1553,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.5.1 (PWA manifest + sized app icons)";
+const APP_VERSION = "v0.5.2 (whole-word keyword matching)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
