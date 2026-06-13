@@ -94,7 +94,7 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Something went wrong");
     localStorage.setItem("token", data.token);
-    location.href = "/";
+    location.href = "/app";
   } catch (e) {
     err.textContent = e.message;
   }

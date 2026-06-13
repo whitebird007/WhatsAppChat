@@ -14,7 +14,7 @@ async function api(method, path, body) {
     if (j.code === "ADMIN_LOCKED") { ADMIN_TOKEN = ""; sessionStorage.removeItem("admin_token"); showLock(); return; }
     localStorage.removeItem("token"); location.href = "/login.html"; return;
   }
-  if (res.status === 403) { location.href = "/"; return; }
+  if (res.status === 403) { location.href = "/app"; return; }
   return res.json();
 }
 const GET = (p) => api("GET", p);
@@ -130,7 +130,7 @@ async function renderAgencies(main) {
   main.querySelectorAll(".ad-imp").forEach((b) => b.addEventListener("click", async () => {
     if (!confirm("Log in as this agency's owner? You'll be taken into their account.")) return;
     const r = await POST(`/api/admin/orgs/${b.dataset.id}/impersonate`);
-    if (r?.token) { localStorage.setItem("token", r.token); location.href = "/"; }
+    if (r?.token) { localStorage.setItem("token", r.token); location.href = "/app"; }
     else toast(r?.error || "Couldn't impersonate", "error");
   }));
   main.querySelectorAll(".ad-del").forEach((b) => b.addEventListener("click", async () => {
@@ -294,7 +294,7 @@ async function doUnlock() {
     headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify(body),
   });
-  if (res.status === 403) { location.href = "/"; return; }
+  if (res.status === 403) { location.href = "/app"; return; }
   const j = await res.json().catch(() => ({}));
   if (!res.ok || !j.token) return lockError(j.error || "Could not unlock.");
   ADMIN_TOKEN = j.token;
@@ -322,7 +322,7 @@ async function startConsole() {
     headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
   });
   if (res.status === 401) { localStorage.removeItem("token"); location.href = "/login.html"; return; }
-  if (res.status === 403) { location.href = "/"; return; }
+  if (res.status === 403) { location.href = "/app"; return; }
   const { passcodeSet } = await res.json().catch(() => ({ passcodeSet: true }));
   lockCreateMode = !passcodeSet;
   $("adLockMsg").textContent = lockCreateMode

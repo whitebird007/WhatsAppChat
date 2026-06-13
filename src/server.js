@@ -25,6 +25,9 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+// Must be set before any route/middleware so the router compiles with it:
+// keeps "/app" (serves the app) and "/app/" (redirect) distinct.
+app.enable("strict routing");
 
 // Multer for file uploads (memory storage, 20 MB limit)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -33,7 +36,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 app.post("/webhooks/stripe", express.raw({ type: "application/json" }), webhookHandler);
 
 app.use(express.json({ limit: "10mb" }));
-app.use(express.static(path.join(__dirname, "..", "public")));
+
+const PUBLIC_DIR = path.join(__dirname, "..", "public");
+// Marketing landing page is the public root; the app lives at /app.
+// index:false stops express.static from auto-serving index.html (the app) at "/".
+app.get("/", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "landing.html")));
+app.get("/app/", (req, res) => res.redirect(301, "/app"));
+app.get("/app", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
+app.use(express.static(PUBLIC_DIR, { index: false }));
 
 /* ============================================================
    PUBLIC ROUTES
@@ -1516,7 +1526,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.8 (followup-overrides-ai, admin-passcode-gate)";
+const APP_VERSION = "v0.4.0 (landing-page, scroll-motion, app-at-/app)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);
