@@ -36,6 +36,7 @@ const GET = (p) => api("GET", p);
 const POST = (p, b) => api("POST", p, b);
 const PUT = (p, b) => api("PUT", p, b);
 const DELETE = (p) => api("DELETE", p);
+const POSTFORM = (p, fd) => api("POST", p, fd, true); // multipart upload with auth
 
 /* ============================================================
    TOAST
@@ -1153,10 +1154,8 @@ $("agentStyleImportBtn").addEventListener("click", async () => {
   const fd = new FormData();
   for (const f of files) fd.append("files", f);
   let r;
-  try {
-    const resp = await fetch("/api/ai/learn-style-from-files", { method: "POST", body: fd });
-    r = await resp.json();
-  } catch { r = { error: "Upload failed — try again" }; }
+  try { r = await POSTFORM("/api/ai/learn-style-from-files", fd); }
+  catch { r = { error: "Upload failed, try again" }; }
   btn.disabled = false; btn.textContent = original;
   if (r?.style) {
     $("agentStyle").value = r.style.trim();
@@ -1300,10 +1299,8 @@ $("ownerImportBtn").addEventListener("click", async () => {
   for (const f of files) fd.append("files", f);
   if ($("ownerImportName").value.trim()) fd.append("ownerName", $("ownerImportName").value.trim());
   let r;
-  try {
-    const resp = await fetch("/api/owner-style/import", { method: "POST", body: fd });
-    r = await resp.json();
-  } catch { r = { error: "Upload failed — try again" }; }
+  try { r = await POSTFORM("/api/owner-style/import", fd); }
+  catch { r = { error: "Upload failed, try again" }; }
   if (r?.error) {
     box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
     return;
@@ -2752,10 +2749,8 @@ $("feedHistorySubmit").addEventListener("click", async () => {
   fd.append("file", file);
   if ($("feedOwnerName").value.trim()) fd.append("ownerName", $("feedOwnerName").value.trim());
   let r;
-  try {
-    const resp = await fetch(`/api/chats/${encodeURIComponent(activeJid)}/import-history`, { method: "POST", body: fd });
-    r = await resp.json();
-  } catch { r = { error: "Upload failed — try again" }; }
+  try { r = await POSTFORM(`/api/chats/${encodeURIComponent(activeJid)}/import-history`, fd); }
+  catch { r = { error: "Upload failed, try again" }; }
   if (r?.error) {
     res.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
     return;

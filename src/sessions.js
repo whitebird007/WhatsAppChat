@@ -3,6 +3,9 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   DisconnectReason,
   downloadMediaMessage,
+  initAuthCreds,
+  BufferJSON,
+  proto,
 } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
@@ -161,15 +164,73 @@ function extractText(msg) {
   );
 }
 
+/**
+ * Baileys auth state backed by the SQLite DB (the `wa_auth` table) instead of
+ * the local `auth/` folder. This keeps a linked WhatsApp number connected across
+ * restarts AND redeploys — the credentials live with the rest of the app's data,
+ * so a fresh deploy never forces users to re-scan the QR.
+ */
+async function useDbAuthState(tenantId) {
+  const read = (id) => {
+    const row = q.getWaAuth.get(tenantId, id);
+    return row ? JSON.parse(row.data, BufferJSON.reviver) : null;
+  };
+  const write = (id, value) => q.setWaAuth.run(tenantId, id, JSON.stringify(value, BufferJSON.replacer));
+
+  // One-time migration: if a tenant was linked under the old folder-based auth,
+  // import those creds+keys into the DB so the existing session is not dropped.
+  if (!read("creds")) {
+    const legacyDir = path.join(AUTH_ROOT, tenantId);
+    try {
+      if (fs.existsSync(path.join(legacyDir, "creds.json"))) {
+        for (const file of fs.readdirSync(legacyDir)) {
+          if (!file.endsWith(".json")) continue;
+          const id = file.replace(/\.json$/, "");
+          const raw = fs.readFileSync(path.join(legacyDir, file), "utf8");
+          q.setWaAuth.run(tenantId, id, raw); // already BufferJSON-encoded by useMultiFileAuthState
+        }
+        console.log(`[wa:${tenantId}] migrated folder auth into the database`);
+      }
+    } catch (err) { console.error(`[wa:${tenantId}] auth migration failed:`, err.message); }
+  }
+
+  const creds = read("creds") || initAuthCreds();
+  return {
+    state: {
+      creds,
+      keys: {
+        get: (type, ids) => {
+          const data = {};
+          for (const id of ids) {
+            let value = read(`${type}-${id}`);
+            if (type === "app-state-sync-key" && value) value = proto.Message.AppStateSyncKeyData.fromObject(value);
+            data[id] = value;
+          }
+          return data;
+        },
+        set: (data) => {
+          for (const type in data) {
+            for (const id in data[type]) {
+              const value = data[type][id];
+              const key = `${type}-${id}`;
+              if (value) write(key, value);
+              else q.delWaAuth.run(tenantId, key);
+            }
+          }
+        },
+      },
+    },
+    saveCreds: () => write("creds", creds),
+  };
+}
+
 export async function startSession(tenantId) {
   const existing = sessions.get(tenantId);
   if (existing && ["connected", "connecting", "qr"].includes(existing.status)) {
     return; // already running
   }
 
-  const authDir = path.join(AUTH_ROOT, tenantId);
-  fs.mkdirSync(authDir, { recursive: true });
-  const { state: authState, saveCreds } = await useMultiFileAuthState(authDir);
+  const { state: authState, saveCreds } = await useDbAuthState(tenantId);
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
@@ -220,7 +281,8 @@ export async function startSession(tenantId) {
       session.qrDataUrl = null;
       broadcast(tenantId, { type: "status", data: getSessionStatus(tenantId) });
       if (loggedOut) {
-        fs.rmSync(authDir, { recursive: true, force: true });
+        q.clearWaAuth.run(tenantId);
+        try { fs.rmSync(path.join(AUTH_ROOT, tenantId), { recursive: true, force: true }); } catch {}
         sessions.delete(tenantId);
       } else if (!session.stopping) {
         setTimeout(() => startSession(tenantId).catch(console.error), 3000);
@@ -557,9 +619,9 @@ export async function stopSession(tenantId, { logout = false } = {}) {
   // "Invalid PreKey ID" / 463 tctoken issues caused by stale Signal state.
   if (logout) {
     try {
-      const authDir = path.join(AUTH_ROOT, tenantId);
-      fs.rmSync(authDir, { recursive: true, force: true });
-      console.log(`[wa:${tenantId}] auth state wiped — fresh QR required`);
+      q.clearWaAuth.run(tenantId);
+      fs.rmSync(path.join(AUTH_ROOT, tenantId), { recursive: true, force: true });
+      console.log(`[wa:${tenantId}] auth state wiped, fresh QR required`);
     } catch (err) { console.error(`[wa:${tenantId}] auth wipe failed:`, err.message); }
   }
   broadcast(tenantId, { type: "status", data: getSessionStatus(tenantId) });
@@ -567,8 +629,12 @@ export async function stopSession(tenantId, { logout = false } = {}) {
 
 /** On server boot, resume sessions for tenants that have linked WhatsApp before. */
 export function resumeAllSessions() {
-  if (!fs.existsSync(AUTH_ROOT)) return;
-  for (const tenantId of fs.readdirSync(AUTH_ROOT)) {
+  const ids = new Set();
+  // Primary source: DB-backed auth (survives redeploys).
+  try { for (const row of q.waAuthTenants.all()) ids.add(row.tenant_id); } catch {}
+  // Also pick up any tenant still on the legacy folder so it migrates on connect.
+  try { if (fs.existsSync(AUTH_ROOT)) for (const id of fs.readdirSync(AUTH_ROOT)) ids.add(id); } catch {}
+  for (const tenantId of ids) {
     const tenant = q.tenantById.get(tenantId);
     if (tenant && tenant.status === "active") {
       startSession(tenantId).catch((err) =>

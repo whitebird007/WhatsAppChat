@@ -372,6 +372,15 @@ CREATE TABLE IF NOT EXISTS lead_sources (
   created INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_lead_sources_tenant ON lead_sources (tenant_id);
+
+-- WhatsApp (Baileys) auth state, stored in the DB so a linked number survives
+-- redeploys/restarts and never needs re-scanning (as long as the DB persists).
+CREATE TABLE IF NOT EXISTS wa_auth (
+  tenant_id TEXT,
+  id TEXT,
+  data TEXT,
+  PRIMARY KEY (tenant_id, id)
+);
 `);
 
 /* Bootstrap the application owner:
@@ -669,6 +678,13 @@ export const q = {
   anDaily: db.prepare("SELECT date(ts/1000,'unixepoch','localtime') AS d, SUM(CASE WHEN from_me=0 THEN 1 ELSE 0 END) AS inbound, SUM(CASE WHEN from_me=1 THEN 1 ELSE 0 END) AS outbound FROM messages WHERE tenant_id = ? AND ts > ? GROUP BY d ORDER BY d"),
 
   // ── Global app settings (admin) ──
+  // WhatsApp auth state (Baileys)
+  getWaAuth: db.prepare("SELECT data FROM wa_auth WHERE tenant_id = ? AND id = ?"),
+  setWaAuth: db.prepare("INSERT INTO wa_auth (tenant_id, id, data) VALUES (?, ?, ?) ON CONFLICT(tenant_id, id) DO UPDATE SET data = excluded.data"),
+  delWaAuth: db.prepare("DELETE FROM wa_auth WHERE tenant_id = ? AND id = ?"),
+  clearWaAuth: db.prepare("DELETE FROM wa_auth WHERE tenant_id = ?"),
+  waAuthTenants: db.prepare("SELECT DISTINCT tenant_id FROM wa_auth WHERE id = 'creds'"),
+
   getApp: db.prepare("SELECT value FROM app_settings WHERE key = ?"),
   setApp: db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"),
 

@@ -1542,7 +1542,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.6 (auto-close QR on connect)";
+const APP_VERSION = "v0.4.7 (auth-upload fix, DB-backed WhatsApp session persistence)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
