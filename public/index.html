@@ -204,6 +204,7 @@
           <div>
             <div class="conv-name" id="convName">Select a chat</div>
             <div class="conv-meta-row">
+              <span class="thread-type hidden" id="convThreadType"></span>
               <span class="conv-phone" id="convPhone"></span>
               <span class="conv-jid-label" id="convJidLabel"></span>
             </div>
@@ -498,6 +499,10 @@
     <div class="panel panel-wide">
       <h2>Broadcast Campaigns</h2>
       <p class="panel-sub">Send a message to a whole segment at once — sent gradually (ban-safe throttling) so your number stays healthy. Great for re-activation and announcements.</p>
+      <div class="cold-warning">
+        <span class="cold-warning-icon">⚠</span>
+        <span>Broadcasts message many people at once — including some who haven't contacted you first. On this connection type WhatsApp may restrict or block these. Best for re-engaging people you've already chatted with. For large cold campaigns, use the official <strong>WhatsApp Cloud API</strong> with approved templates.</span>
+      </div>
       <div class="rule-form" id="broadcastForm">
         <input id="bcName" placeholder="Campaign name (e.g. June reactivation)" />
         <div class="bc-segment-row">
@@ -880,6 +885,10 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
     <div class="modal-header">
       <span class="modal-title">Send to a new number</span>
       <button class="modal-close" id="newChatModalClose">×</button>
+    </div>
+    <div class="cold-warning">
+      <span class="cold-warning-icon">⚠</span>
+      <span>You're starting a <strong>new conversation</strong>. Messaging people who haven't contacted you first can trigger WhatsApp restrictions on this connection. For reliable cold outreach, use the official <strong>WhatsApp Cloud API</strong>.</span>
     </div>
     <div class="modal-field">
       <label>Phone number <span>include country code</span></label>

@@ -396,6 +396,21 @@ async function openChat(jid) {
   const msgs = await GET(`/api/messages?jid=${encodeURIComponent(jid)}`);
   renderMessages(msgs);
 
+  // Reply vs new-conversation indicator: if the customer has ever messaged us,
+  // replying is safe; if not, we'd be starting a (restriction-prone) new chat.
+  const tt = $("convThreadType");
+  const hasInbound = Array.isArray(msgs) && msgs.some((m) => !m.from_me);
+  tt.classList.remove("hidden");
+  if (hasInbound) {
+    tt.textContent = "↩ Reply";
+    tt.className = "thread-type reply";
+    tt.title = "This customer messaged you first — your replies deliver normally.";
+  } else {
+    tt.textContent = "⚠ New conversation";
+    tt.className = "thread-type cold";
+    tt.title = "You're starting this chat. WhatsApp may restrict messages to people who haven't contacted you first.";
+  }
+
   // Re-render chat list (clear unread highlight)
   renderChatList();
   updateUnreadBadge();
@@ -692,6 +707,12 @@ function handleIncomingMessage(data) {
     el.innerHTML = renderBubble(msg);
     container.appendChild(el.firstElementChild);
     container.scrollTop = container.scrollHeight;
+    // A customer message turns this into a safe "reply" thread
+    if (!from_me) {
+      const tt = $("convThreadType");
+      tt.textContent = "↩ Reply"; tt.className = "thread-type reply";
+      tt.title = "This customer messaged you first — your replies deliver normally.";
+    }
   }
 }
 
