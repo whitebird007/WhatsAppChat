@@ -1526,7 +1526,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.1 (brand: Zaply)";
+const APP_VERSION = "v0.4.2 (human-like hero, no em dashes, visible buttons)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);

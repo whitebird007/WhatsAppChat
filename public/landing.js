@@ -1,4 +1,4 @@
-/* Zaply — landing page motion */
+/* Zaply landing page motion */
 "use strict";
 const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (s, r = document) => r.querySelector(s);
@@ -40,11 +40,11 @@ if (reduce) {
   if (!body) return;
   const script = [
     { who: "them", text: "Hi! What do you sell?" },
-    { who: "me", text: "Hey! 👋 We help businesses run their whole WhatsApp on autopilot — replies, bookings, payments. What are you working on?" },
+    { who: "me", text: "Hey! 👋 We run your whole WhatsApp on autopilot. Replies, bookings, payments, all of it. What are you working on?" },
     { who: "them", text: "do you reply automatically even at night?" },
-    { who: "me", text: "Yep, 24/7 — in your own tone 🙌 want me to show you a quick demo?" },
+    { who: "me", text: "Yep, 24/7, and always in your own tone 🙌 want me to show you a quick demo?" },
     { who: "them", text: "yes please" },
-    { who: "me", text: "Great! I'll set you up — it takes about 60 seconds to connect your number ✨" },
+    { who: "me", text: "Great! I'll set you up. It only takes about 60 seconds to connect your number ✨" },
   ];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   function bubble(cls, text, tick) {
