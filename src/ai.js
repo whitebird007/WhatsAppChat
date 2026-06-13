@@ -64,6 +64,37 @@ export async function improveMessage(tenantId, draft, jid) {
   }
 }
 
+/**
+ * Help the user author an AI agent. Given the field being written
+ * (instructions | playbook | rules), the user's rough draft (a few words or
+ * lines), and the agent's name/business context, produce a polished version
+ * of just that field. Returns a string (or null on provider error).
+ */
+export async function draftAgentField(tenantId, { field, draft = "", agentName = "" } = {}) {
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, null);
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
+
+  const specs = {
+    instructions: "the agent's INSTRUCTIONS — a clear paragraph describing the agent's role, who it serves, its communication style/tone, and its goals. Write 3-6 sentences in second person ('You are…').",
+    playbook: "the agent's PLAYBOOK — a numbered, step-by-step conversation guide the agent follows from greeting to close or human handoff. Output 5-8 concise numbered steps.",
+    rules: "the agent's ADDITIONAL RULES — hard constraints the agent must always follow. Output 4-7 concise bullet points starting with '- '.",
+  };
+  const spec = specs[field] || specs.instructions;
+  const ctx = agentName ? ` The agent is named "${agentName}".` : "";
+  const basis = draft.trim()
+    ? `Expand and polish the user's rough notes into ${spec}${ctx}\n\nUser's notes:\n${draft.trim()}`
+    : `Write ${spec}${ctx} Use sensible, professional defaults for a WhatsApp business assistant.`;
+  const system = "You help business owners configure an AI WhatsApp agent. You write ONLY the requested section — no preamble, no headings, no explanations, no markdown code fences. Keep it practical and ready to paste directly into the field.";
+  const turns = [{ role: "user", content: basis }];
+  try {
+    if (provider === "openai") return await callOpenAI(system, turns, apiKey, model);
+    return await callAnthropic(system, turns);
+  } catch (err) {
+    console.error(`[ai-draft-field:${tenantId}]`, err.message);
+    const e = new Error("AI couldn't write this — check your API key."); e.aiProviderError = true; throw e;
+  }
+}
+
 /** Suggest 3 short reply options for the current conversation. Returns string[]. */
 export async function suggestReplies(tenantId, jid) {
   const recent = q.recentMessages.all(tenantId, jid, 12).reverse();

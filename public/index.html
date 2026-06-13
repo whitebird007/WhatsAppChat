@@ -883,17 +883,17 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
     </div>
 
     <div class="modal-field">
-      <label>Instructions <span>describe role, communication style, and goals</span></label>
+      <label class="label-row">Instructions <span>describe role, communication style, and goals</span><button type="button" class="ai-write-btn" id="aiWriteInstructions" data-field="instructions" data-target="agentInstructions">✨ AI write</button></label>
       <textarea id="agentInstructions" rows="5" placeholder="You are a friendly sales agent for [Company]. Your job is to..."></textarea>
     </div>
 
     <div class="modal-field">
-      <label>Agent Playbook <span>step-by-step conversation guide</span></label>
+      <label class="label-row">Agent Playbook <span>step-by-step conversation guide</span><button type="button" class="ai-write-btn" id="aiWritePlaybook" data-field="playbook" data-target="agentPlaybook">✨ AI write</button></label>
       <textarea id="agentPlaybook" rows="4" placeholder="1. Greet the customer warmly&#10;2. Ask about their needs&#10;3. Recommend the right product or plan&#10;4. Handle objections with empathy&#10;5. Close or hand off to human"></textarea>
     </div>
 
     <div class="modal-field">
-      <label>Additional Rules <span>constraints the agent must follow</span></label>
+      <label class="label-row">Additional Rules <span>constraints the agent must follow</span><button type="button" class="ai-write-btn" id="aiWriteRules" data-field="rules" data-target="agentRules">✨ AI write</button></label>
       <textarea id="agentRules" rows="3" placeholder="- Never quote prices more than 10% off standard rate&#10;- Always respond in the same language as the customer&#10;- Never make delivery promises"></textarea>
     </div>
 

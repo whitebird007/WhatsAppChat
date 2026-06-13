@@ -1034,6 +1034,37 @@ function openAgentModal(agent) {
 $("agentModalClose").addEventListener("click", () => $("agentModal").classList.add("hidden"));
 $("agentModalCancel").addEventListener("click", () => $("agentModal").classList.add("hidden"));
 
+// AI-assist buttons on the agent's instructions / playbook / rules fields:
+// expand the user's few words (or write from scratch) into a polished section.
+document.querySelectorAll(".ai-write-btn").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const field = btn.dataset.field;
+    const ta = $(btn.dataset.target);
+    if (!ta) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "✨ Writing…";
+    try {
+      const r = await POST("/api/ai/draft-agent-field", {
+        field,
+        draft: ta.value,
+        agentName: $("agentName").value.trim(),
+      });
+      if (r?.text) {
+        ta.value = r.text.trim();
+        toast("AI drafted this section — edit as you like", "success");
+      } else {
+        toast(r?.error || "AI couldn't write this", "error");
+      }
+    } catch {
+      toast("AI request failed", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
+});
+
 $("agentModalSave").addEventListener("click", async () => {
   const id = $("agentModalId").value;
   const body = {

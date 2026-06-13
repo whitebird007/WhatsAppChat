@@ -15,7 +15,7 @@ import {
   isConnected, connectedCount,
 } from "./sessions.js";
 import { createCheckout, createPortal, webhookHandler, billingEnabled } from "./billing.js";
-import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour, learnChatBehaviourFromExport } from "./ai.js";
+import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour, learnChatBehaviourFromExport, draftAgentField } from "./ai.js";
 import { packSummary, installPack } from "./packs.js";
 import QRCode from "qrcode";
 import {
@@ -505,6 +505,17 @@ app.post("/api/ai/improve", async (req, res) => {
     if (!improved) return res.status(503).json({ error: "AI unavailable — check your API key in AI Agents" });
     res.json({ improved });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// AI-assist for authoring an agent's instructions / playbook / rules
+app.post("/api/ai/draft-agent-field", async (req, res) => {
+  const { field, draft, agentName } = req.body || {};
+  if (!["instructions", "playbook", "rules"].includes(field)) return res.status(400).json({ error: "invalid field" });
+  try {
+    const text = await draftAgentField(req.tenant.id, { field, draft: draft || "", agentName: agentName || "" });
+    if (!text) return res.status(503).json({ error: "AI unavailable — check your API key" });
+    res.json({ text });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 /* Chat settings */
@@ -1424,7 +1435,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.4 (per-thread-style-overrides-global)";
+const APP_VERSION = "v0.3.5 (ai-write-agent-fields)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);
