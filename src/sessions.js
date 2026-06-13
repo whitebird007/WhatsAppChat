@@ -145,6 +145,15 @@ export async function startSession(tenantId) {
     printQRInTerminal: false,
     syncFullHistory: false,
     markOnlineOnConnect: false,
+    // Required by WhatsApp: when a recipient's device asks to re-send a message
+    // (after an encryption-session reset), Baileys calls this to get the content.
+    // Without it, those messages silently never arrive even though they look "sent".
+    getMessage: async (key) => {
+      try {
+        const row = q.getMessageById.get(tenantId, key.id);
+        return row ? { conversation: row.body } : undefined;
+      } catch { return undefined; }
+    },
   });
 
   const session = { sock, status: "connecting", qrDataUrl: null, me: null, stopping: false };
@@ -203,6 +212,7 @@ export async function startSession(tenantId) {
       if (st == null || !u.key?.id || !u.key?.fromMe) continue;
       const status = typeof st === "number" ? st : ({ PENDING: 1, SERVER_ACK: 2, DELIVERY_ACK: 3, READ: 4, PLAYED: 5, ERROR: 0 }[st] ?? null);
       if (status == null) continue;
+      if (status === 0) console.error(`[wa:${tenantId}] delivery FAILED for ${u.key.id} → ${u.key.remoteJid} (WhatsApp rejected the message)`);
       q.setMessageStatus.run(status, tenantId, u.key.id);
       broadcast(tenantId, { type: "status_update", data: { jid: u.key.remoteJid, id: u.key.id, status } });
     }

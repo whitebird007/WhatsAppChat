@@ -524,6 +524,7 @@ export const q = {
     VALUES (@id, @tenant_id, @jid, @from_me, @body, @ts, @via, @mime_type, @file_name, @media_url, @status)
   `),
   setMessageStatus: db.prepare("UPDATE messages SET status = ? WHERE tenant_id = ? AND id = ?"),
+  getMessageById: db.prepare("SELECT body FROM messages WHERE tenant_id = ? AND id = ?"),
   listMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts ASC LIMIT 500"),
   recentMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts DESC LIMIT ?"),
   countRecentAiReplies: db.prepare("SELECT COUNT(*) AS n FROM messages WHERE tenant_id = ? AND jid = ? AND via = 'ai' AND ts > ?"),
