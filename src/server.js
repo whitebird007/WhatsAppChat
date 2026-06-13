@@ -1429,7 +1429,7 @@ function countConnectedSessions() { return connectedCount(); }
 
 /* ---- White-label branding helpers ---- */
 function brandingDefaults() {
-  return { app_name: "InboxAI", logo: "", hue: 158, login_subtitle: "Sign in to your WhatsApp AI inbox.", powered_by: true, custom_domain: "" };
+  return { app_name: "Zaply", logo: "", hue: 158, login_subtitle: "Sign in to your WhatsApp AI inbox.", powered_by: true, custom_domain: "" };
 }
 function brandingFor(tenantId) {
   const g = (k) => q.getSettingRow.get(tenantId, k)?.value;
@@ -1526,10 +1526,10 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.0 (landing-page, scroll-motion, app-at-/app)";
+const APP_VERSION = "v0.4.1 (brand: Zaply)";
 server.listen(PORT, () => {
   console.log("======================================================");
-  console.log(`InboxAI ${APP_VERSION}`);
+  console.log(`Zaply ${APP_VERSION}`);
   console.log(`Portal running at http://localhost:${PORT}`);
   console.log("======================================================");
   resumeAllSessions();

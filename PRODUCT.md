@@ -10,7 +10,7 @@ Agencies and resellers managing WhatsApp AI automation for multiple clients. Pow
 
 ## Product Purpose
 
-InboxAI is a self-hosted WhatsApp inbox with AI auto-replies. It lets users connect a WhatsApp number via QR, manage all inbound conversations in one place, configure keyword auto-replies and multi-step flows, and integrate with external automation tools via webhooks and API. Success means a user can manage their entire WhatsApp business communication workflow without touching WhatsApp directly.
+Zaply is a self-hosted WhatsApp inbox with AI auto-replies. It lets users connect a WhatsApp number via QR, manage all inbound conversations in one place, configure keyword auto-replies and multi-step flows, and integrate with external automation tools via webhooks and API. Success means a user can manage their entire WhatsApp business communication workflow without touching WhatsApp directly.
 
 ## Brand Personality
 

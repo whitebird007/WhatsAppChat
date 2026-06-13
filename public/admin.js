@@ -1,4 +1,4 @@
-/* InboxAI — Super-admin console */
+/* Zaply — Super-admin console */
 "use strict";
 const TOKEN = localStorage.getItem("token");
 if (!TOKEN) location.href = "/login.html";
@@ -64,7 +64,7 @@ async function renderOverview(main) {
   const planRows = Object.entries(d.byPlan || {});
   main.innerHTML = `
     <div class="ad-h">Overview</div>
-    <div class="ad-sub">Everything happening across InboxAI right now.</div>
+    <div class="ad-sub">Everything happening across Zaply right now.</div>
     <div class="ad-kpis">
       <div class="ad-kpi"><div class="ad-kpi-label">Agencies</div><div class="ad-kpi-val">${num(d.agencies)}</div></div>
       <div class="ad-kpi"><div class="ad-kpi-label">Users</div><div class="ad-kpi-val">${num(d.users)}</div></div>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sign in — InboxAI</title>
+<title>Sign in — Zaply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
@@ -41,7 +41,7 @@
     <div class="auth-error" id="err"></div>
     <div class="switch" id="switchRow">New here? <a id="switchLink">Start your free 7-day trial</a></div>
   </div>
-  <div id="poweredBy" style="margin-top:16px;font-size:12px;color:var(--ink-4);text-align:center;display:none">Powered by <strong>InboxAI</strong></div>
+  <div id="poweredBy" style="margin-top:16px;font-size:12px;color:var(--ink-4);text-align:center;display:none">Powered by <strong>Zaply</strong></div>
 <script>
 let mode = new URLSearchParams(location.search).get("mode") === "signup" ? "signup" : "login";
 let brandSub = "Sign in to your WhatsApp AI inbox.";
@@ -51,7 +51,7 @@ let brandSub = "Sign in to your WhatsApp AI inbox.";
   try {
     const b = await (await fetch("/api/branding/public?host=" + encodeURIComponent(location.hostname))).json();
     if (b.hue != null) document.documentElement.style.setProperty("--brand-h", b.hue);
-    const name = b.app_name || "InboxAI";
+    const name = b.app_name || "Zaply";
     document.title = "Sign in — " + name;
     if (b.login_subtitle) brandSub = b.login_subtitle;
     const brandEl = document.querySelector(".auth-card .brand");

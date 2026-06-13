@@ -1,4 +1,4 @@
-/* InboxAI — landing page motion */
+/* Zaply — landing page motion */
 "use strict";
 const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (s, r = document) => r.querySelector(s);

@@ -1,4 +1,4 @@
-# Deploying InboxAI to Replit
+# Deploying Zaply to Replit
 
 This app is **stateful**: it stores data in a SQLite file (`data.sqlite`) and keeps
 your WhatsApp login in `auth/`, and it holds a long-lived WhatsApp socket +
@@ -22,7 +22,7 @@ Cleanest, and lets you push future updates with one command.
    cd whatsapp-ai-portal
    git init
    git add .
-   git commit -m "InboxAI v0.2 — full feature build"
+   git commit -m "Zaply v0.2 — full feature build"
    git branch -M main
    # create an EMPTY repo on github.com first, then:
    git remote add origin https://github.com/<you>/inboxai.git
