@@ -917,10 +917,10 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
       <label class="label-row">Writing style &amp; tone <span>how THIS agent should sound</span><button type="button" class="ai-write-btn" id="aiWriteStyle" data-field="style" data-target="agentStyle">✨ AI write</button></label>
       <textarea id="agentStyle" rows="3" placeholder="e.g. Warm and upbeat. Short sentences. One emoji max. Greet by first name, never use slang."></textarea>
       <div class="style-import" style="margin-top:8px;padding:12px;border:1px dashed var(--line-2);border-radius:10px">
-        <div style="font-size:12.5px;font-weight:600;margin-bottom:4px">⚡ Learn this agent's style from chat files</div>
-        <div class="field-hint" style="margin-bottom:8px">Upload WhatsApp chat exports (.txt — chat → Export chat → Without media → unzip). The AI reads them and fills the style above. Multiple files allowed.</div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:4px">⚡ Learn from chat files (tone, behaviour &amp; style)</div>
+        <div class="field-hint" style="margin-bottom:8px">Import one or more WhatsApp chat exports (.txt: open a chat → Export chat → Without media → unzip). The AI reads them all and learns the tone, behaviour and writing style, then fills the field above. Select multiple files at once.</div>
         <input type="file" id="agentStyleFiles" accept=".txt,text/plain" multiple style="margin-bottom:8px" />
-        <button type="button" class="ghost-btn" id="agentStyleImportBtn">Learn style from these files</button>
+        <button type="button" class="ghost-btn" id="agentStyleImportBtn">Learn from these files</button>
       </div>
     </div>
 

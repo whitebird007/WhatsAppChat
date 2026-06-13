@@ -707,7 +707,7 @@ export const q = {
   getLeadSourceByRef: db.prepare("SELECT * FROM lead_sources WHERE tenant_id = ? AND ref = ? LIMIT 1"),
   addLeadSource: db.prepare("INSERT INTO lead_sources (tenant_id, name, ref, prefill, created) VALUES (?, ?, ?, ?, ?)"),
   deleteLeadSource: db.prepare("DELETE FROM lead_sources WHERE id = ? AND tenant_id = ?"),
-  incLeadSourceLead: db.prepare("UPDATE lead_sources SET leads = leads + 1 WHERE id = ?"),
+  incLeadSourceLead: db.prepare("UPDATE lead_sources SET leads = leads + 1 WHERE id = ? AND tenant_id = ?"),
 };
 
 export function getSetting(tenantId, key) {

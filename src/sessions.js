@@ -350,7 +350,7 @@ async function handleMessage(tenantId, sock, msg) {
     const src = q.getLeadSourceByRef.get(tenantId, refMatch[1].toLowerCase());
     if (src) {
       q.addChatTag.run(tenantId, jid, src.name.toLowerCase());
-      q.incLeadSourceLead.run(src.id);
+      q.incLeadSourceLead.run(src.id, tenantId);
     }
   }
 

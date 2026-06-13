@@ -43,6 +43,22 @@ const PUBLIC_DIR = path.join(__dirname, "..", "public");
 app.get("/", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "landing.html")));
 app.get("/app/", (req, res) => res.redirect(301, "/app"));
 app.get("/app", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
+
+// Per-tenant uploads (chat media + contact avatars) are PRIVATE. They live under
+// public/media/<tenant>/ and public/avatars/<tenant>/, but must never be readable
+// by another org. Since <img>/<audio> tags can't send an Authorization header, the
+// token is passed as ?t=<jwt>; we verify it and confirm the caller is a member of
+// that exact tenant before serving the file. This route is registered BEFORE
+// express.static, so static never serves these paths unauthenticated.
+const SAFE = /^[a-z0-9._-]+$/i;
+app.get("/:kind(media|avatars)/:tenant/:file", (req, res) => {
+  const { kind, tenant, file } = req.params;
+  if (!SAFE.test(tenant) || !SAFE.test(file) || file.includes("..")) return res.status(400).end();
+  const payload = req.query.t && verifyToken(String(req.query.t));
+  if (!payload) return res.status(401).end();
+  if (!q.getMembership.get(payload.uid, tenant)) return res.status(403).end();
+  res.sendFile(path.join(PUBLIC_DIR, kind, tenant, file));
+});
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
 /* ============================================================
@@ -1526,7 +1542,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.4 (editorial kickers, redesigned proof band)";
+const APP_VERSION = "v0.4.5 (private media access-control, lead-counter scoping)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);

@@ -7,6 +7,16 @@
 const TOKEN = localStorage.getItem("token");
 if (!TOKEN) location.href = "/login.html";
 
+// Private per-tenant uploads (media + avatars) require the auth token in the URL,
+// since <img>/<audio> tags can't send an Authorization header.
+function mediaUrl(u) {
+  if (!u || typeof u !== "string") return u;
+  if (u.startsWith("/media/") || u.startsWith("/avatars/")) {
+    return u + (u.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN);
+  }
+  return u;
+}
+
 const $ = (id) => document.getElementById(id);
 
 /* ============================================================
@@ -190,7 +200,7 @@ function handleWsEvent({ type, data }) {
     if (c) { c.profile_pic = data.url; renderChatList(); }
     if (data.jid === activeJid) {
       const av = $("convAvatar");
-      av.innerHTML = `<img class="avatar-img" src="${data.url}" alt="">`;
+      av.innerHTML = `<img class="avatar-img" src="${mediaUrl(data.url)}" alt="">`;
     }
   }
   if (type === "broadcast_progress") { if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
@@ -269,7 +279,7 @@ function renderChatList() {
     const tags = (c.tags || []).map((t) => `<span class="tag-chip" style="font-size:10px;padding:1px 7px">${t}</span>`).join("");
     const lc = c.lifecycle || "new_lead";
     return `<div class="chat-item${c.jid === activeJid ? " active" : ""}" data-jid="${c.jid}">
-      <div class="chat-avatar ${avCls}">${c.profile_pic ? `<img class="avatar-img" src="${escHtml(c.profile_pic)}" alt="">` : init}</div>
+      <div class="chat-avatar ${avCls}">${c.profile_pic ? `<img class="avatar-img" src="${escHtml(mediaUrl(c.profile_pic))}" alt="">` : init}</div>
       <div class="chat-body">
         <div class="chat-top">
           <span class="chat-name">${escHtml(c.name || formatJid(c.jid))}</span>
@@ -404,7 +414,7 @@ async function openChat(jid) {
   // Header avatar (photo if we have one, else initials)
   const av = $("convAvatar");
   av.className = `conv-header-avatar ${avCls}`;
-  if (chat.profile_pic) av.innerHTML = `<img class="avatar-img" src="${escHtml(chat.profile_pic)}" alt="">`;
+  if (chat.profile_pic) av.innerHTML = `<img class="avatar-img" src="${escHtml(mediaUrl(chat.profile_pic))}" alt="">`;
   else av.textContent = init;
 
   // Real phone number: prefer the stored phone (for @lid contacts the JID digits
@@ -668,16 +678,17 @@ function renderBubble(m) {
   // Media bubble — render the actual content
   if (m.mime_type && m.media_url) {
     const mt = m.mime_type;
+    const url = mediaUrl(m.media_url);
     const caption = m.body && !/^(📷|🎬|🎤|📎|🌟)/.test(m.body) ? `<div class="media-caption">${escHtml(m.body)}</div>` : "";
     let inner;
     if (mt.startsWith("image/")) {
-      inner = `<a href="${m.media_url}" target="_blank"><img class="media-img" src="${m.media_url}" alt="image"></a>${caption}`;
+      inner = `<a href="${url}" target="_blank"><img class="media-img" src="${url}" alt="image"></a>${caption}`;
     } else if (mt.startsWith("video/")) {
-      inner = `<video class="media-video" src="${m.media_url}" controls preload="metadata"></video>${caption}`;
+      inner = `<video class="media-video" src="${url}" controls preload="metadata"></video>${caption}`;
     } else if (mt.startsWith("audio/")) {
-      inner = `<div class="media-voice"><span class="media-voice-icon">🎤</span><audio src="${m.media_url}" controls preload="metadata"></audio></div>`;
+      inner = `<div class="media-voice"><span class="media-voice-icon">🎤</span><audio src="${url}" controls preload="metadata"></audio></div>`;
     } else {
-      inner = `<a class="media-doc" href="${m.media_url}" target="_blank" download><span class="media-doc-icon">📄</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || "Document")}</span><span class="media-doc-sub">Tap to download</span></span></a>`;
+      inner = `<a class="media-doc" href="${url}" target="_blank" download><span class="media-doc-icon">📄</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || "Document")}</span><span class="media-doc-sub">Tap to download</span></span></a>`;
     }
     return `<div class="bubble media ${cls}"${idAttr}>${inner}${meta}</div>`;
   }
