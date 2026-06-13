@@ -401,6 +401,30 @@ input, textarea, select { font-family: inherit; }
   justify-content: space-between;
   flex-shrink: 0;
 }
+/* "Answer every chat with AI" (sleep mode) toggle in the conversation panel */
+.allchats-bar {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 24px);
+  margin: 10px 12px 2px; padding: 9px 12px; border-radius: 11px; cursor: pointer;
+  background: var(--brand-50); border: 1px solid var(--brand-100); color: var(--ink);
+  font: inherit; text-align: left; transition: background .18s, border-color .18s;
+}
+.allchats-bar:hover { border-color: var(--brand-400); }
+.allchats-bar.on { background: var(--brand-600); border-color: var(--brand-600); color: #fff; }
+.allchats-ic { flex: none; color: var(--brand-600); }
+.allchats-bar.on .allchats-ic { color: #fff; }
+.allchats-text { display: flex; flex-direction: column; line-height: 1.2; flex: 1; min-width: 0; }
+.allchats-text strong { font-size: 12.5px; font-weight: 650; }
+.allchats-text small { font-size: 10.5px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.allchats-track {
+  flex: none; width: 34px; height: 20px; border-radius: 999px; position: relative;
+  background: var(--line); transition: background .18s;
+}
+.allchats-bar.on .allchats-track { background: oklch(1 0 0 / 0.45); }
+.allchats-knob {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px oklch(0 0 0 / 0.3); transition: transform .18s var(--ease-out-quart, ease);
+}
+.allchats-bar.on .allchats-knob { transform: translateX(14px); }
 .chat-list-title {
   font-size: 14px;
   font-weight: 700;

@@ -170,6 +170,12 @@
           <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12"/></svg>
         </button>
       </div>
+      <!-- Answer every chat with AI (sleep mode) -->
+      <button class="allchats-bar" id="allChatsBar" role="switch" aria-checked="false" title="Turn AI on for every chat (new and existing). Chats you switch off individually stay off.">
+        <svg class="allchats-ic" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3a7 7 0 100 14 6 6 0 01-2-11 7 7 0 012-3z"/></svg>
+        <span class="allchats-text"><strong>Answer every chat with AI</strong><small id="allChatsSub">Sleep mode — AI replies to every conversation</small></span>
+        <span class="allchats-track"><span class="allchats-knob"></span></span>
+      </button>
       <!-- Search -->
       <div class="chat-search-wrap">
         <svg class="chat-search-icon" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
@@ -569,10 +575,7 @@
         <input type="checkbox" id="aiGlobal" />
         <span>AI auto-replies enabled (master switch)</span>
       </label>
-      <label class="ai-toggle big">
-        <input type="checkbox" id="aiAllChats" />
-        <span>Answer every chat with AI (sleep mode) <small style="font-weight:400;color:var(--ink-3)">— turns AI on for all chats, new and existing. Chats you switch off individually stay off.</small></span>
-      </label>
+      <div class="info-note" style="font-size:12.5px">💡 To answer <strong>every</strong> chat with AI (sleep mode), use the <strong>“Answer every chat with AI”</strong> switch at the top of the <strong>Chats</strong> tab.</div>
       <label class="field">
         <span>Business instructions — describe your business, products, prices, and tone</span>
         <textarea id="aiPrompt" rows="10"></textarea>

@@ -91,6 +91,35 @@ function updateSoundBtn() {
     : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>`;
 }
 
+/* "Answer every chat with AI" (sleep mode) toggle in the Conversations panel */
+function updateAllChatsBar() {
+  const bar = $("allChatsBar");
+  if (!bar) return;
+  bar.classList.toggle("on", aiAllChats);
+  bar.setAttribute("aria-checked", String(aiAllChats));
+  const sub = $("allChatsSub");
+  if (sub) sub.textContent = aiAllChats
+    ? "On — AI is answering every chat"
+    : "Sleep mode — turn AI on for every conversation";
+}
+if ($("allChatsBar")) {
+  $("allChatsBar").addEventListener("click", async () => {
+    const next = !aiAllChats;
+    aiAllChats = next;
+    updateAllChatsBar();
+    renderChatList();
+    const r = await POST("/api/ai/all-chats", { enabled: next });
+    if (r?.ok) {
+      toast(next ? "AI is now answering every chat" : "AI on-all-chats turned off", "success");
+    } else {
+      aiAllChats = !next; updateAllChatsBar(); renderChatList(); // revert on failure
+      toast("Couldn't update — try again", "error");
+    }
+    // Keep the Settings checkbox in sync if it's mounted
+    if ($("aiAllChats")) $("aiAllChats").checked = aiAllChats;
+  });
+}
+
 if ($("soundToggle")) {
   $("soundToggle").addEventListener("click", () => {
     soundOn = !soundOn;
@@ -1313,8 +1342,8 @@ $("ruleAdd").addEventListener("click", async () => {
 async function loadSettings() {
   const s = await GET("/api/settings");
   $("aiGlobal").checked = s?.ai_global_enabled === "1";
-  $("aiAllChats").checked = s?.ai_all_chats === "1";
   aiAllChats = s?.ai_all_chats === "1";
+  updateAllChatsBar();
   $("aiPrompt").value = s?.ai_system_prompt || "";
   $("aiHandoff").value = s?.ai_handoff_keywords || "";
   loadOwnerStyle();
@@ -1375,13 +1404,10 @@ $("ownerImportBtn").addEventListener("click", async () => {
 $("settingsSave").addEventListener("click", async () => {
   const r = await POST("/api/settings", {
     ai_global_enabled: $("aiGlobal").checked ? "1" : "0",
-    ai_all_chats: $("aiAllChats").checked ? "1" : "0",
     ai_system_prompt: $("aiPrompt").value,
     ai_handoff_keywords: $("aiHandoff").value,
   });
   if (r?.ok) {
-    aiAllChats = $("aiAllChats").checked;
-    renderChatList();
     $("savedNote").classList.remove("hidden");
     setTimeout(() => $("savedNote").classList.add("hidden"), 2000);
   }
@@ -3243,6 +3269,7 @@ async function init() {
   applyMe(me);
   // Global AI "all chats" state (drives effective per-chat AI display)
   try { const s = await GET("/api/settings"); aiAllChats = s?.ai_all_chats === "1"; } catch {}
+  updateAllChatsBar();
 
   // Load status
   const status = await GET("/api/status");
