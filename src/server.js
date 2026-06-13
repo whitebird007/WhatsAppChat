@@ -1553,7 +1553,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.5.3 (sleep-mode toggle in Chats tab)";
+const APP_VERSION = "v0.5.4 (AI = agents only, no global default agent)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);

@@ -1341,70 +1341,13 @@ $("ruleAdd").addEventListener("click", async () => {
    ============================================================ */
 async function loadSettings() {
   const s = await GET("/api/settings");
-  $("aiGlobal").checked = s?.ai_global_enabled === "1";
   aiAllChats = s?.ai_all_chats === "1";
   updateAllChatsBar();
-  $("aiPrompt").value = s?.ai_system_prompt || "";
   $("aiHandoff").value = s?.ai_handoff_keywords || "";
-  loadOwnerStyle();
 }
-
-async function loadOwnerStyle() {
-  const d = await GET("/api/owner-style");
-  const status = $("ownerStyleStatus");
-  const btn = $("learnStyleBtn");
-  const box = $("ownerStyleBox");
-  if (!d) return;
-  status.style.display = "block";
-  status.textContent = `You've sent ${d.ownerMsgs} message${d.ownerMsgs === 1 ? "" : "s"}. ` +
-    (d.eligible ? "Ready to learn your style." : `Need ${d.threshold}+ to learn your style.`);
-  btn.disabled = !d.eligible;
-  if (d.style) {
-    box.classList.remove("hidden");
-    box.innerHTML = `<div class="chat-summary-body"><strong>Your learned style</strong><br>${escHtml(d.style).replace(/\n/g, "<br>")}</div>`;
-  } else {
-    box.classList.add("hidden");
-  }
-}
-
-$("learnStyleBtn").addEventListener("click", async () => {
-  const box = $("ownerStyleBox");
-  box.classList.remove("hidden");
-  box.innerHTML = `<div class="suggest-loading">🧠 Studying how you write…</div>`;
-  const r = await POST("/api/owner-style/learn", {});
-  if (r?.error) {
-    box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
-    return;
-  }
-  box.innerHTML = `<div class="chat-summary-body"><strong>Your learned style</strong><br>${escHtml(r.style || "").replace(/\n/g, "<br>")}</div>`;
-  toast("Writing style learned — AI now replies in your voice", "success");
-});
-
-$("ownerImportBtn").addEventListener("click", async () => {
-  const files = $("ownerImportFiles").files;
-  if (!files.length) return toast("Pick at least one .txt export", "error");
-  const box = $("ownerStyleBox");
-  box.classList.remove("hidden");
-  box.innerHTML = `<div class="suggest-loading">⚡ Reading ${files.length} chat file${files.length === 1 ? "" : "s"} & learning your voice…</div>`;
-  const fd = new FormData();
-  for (const f of files) fd.append("files", f);
-  if ($("ownerImportName").value.trim()) fd.append("ownerName", $("ownerImportName").value.trim());
-  let r;
-  try { r = await POSTFORM("/api/owner-style/import", fd); }
-  catch { r = { error: "Upload failed, try again" }; }
-  if (r?.error) {
-    box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
-    return;
-  }
-  box.innerHTML = `<div class="chat-summary-body" style="color:var(--brand-600)">✓ Learned from ${r.imported || 0} messages across your files.</div><div class="chat-summary-body" style="margin-top:8px"><strong>Your learned style</strong><br>${escHtml(r.style || "").replace(/\n/g, "<br>")}</div>`;
-  toast("Voice learned instantly — AI now replies like you", "success");
-  loadOwnerStyle();
-});
 
 $("settingsSave").addEventListener("click", async () => {
   const r = await POST("/api/settings", {
-    ai_global_enabled: $("aiGlobal").checked ? "1" : "0",
-    ai_system_prompt: $("aiPrompt").value,
     ai_handoff_keywords: $("aiHandoff").value,
   });
   if (r?.ok) {

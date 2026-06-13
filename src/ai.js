@@ -22,10 +22,11 @@ export async function generateReply(tenantId, jid) {
   const lower = lastCustomerMsg.body.toLowerCase();
   if (handoffKw.some((k) => k && lower.includes(k))) return null;
 
-  // Resolve agent: per-chat assignment > first active agent > global AI Settings.
-  // The generic global prompt is used ONLY when the tenant has no agents at all.
+  // AI replies are powered ONLY by AI Agents. If the tenant has no active
+  // agent, Zaply does not auto-reply (no generic global fallback).
   const chat = q.getChat.get(tenantId, jid);
   const agent = resolveAgent(tenantId, chat);
+  if (!agent) return null;
 
   const systemPrompt = buildSystemPrompt(tenantId, agent, chat);
   const turns = buildTurns(recent);

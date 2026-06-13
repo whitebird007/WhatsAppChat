@@ -569,46 +569,15 @@
   <!-- ═══ AI SETTINGS VIEW ═══ -->
   <section class="view view-panel hidden" id="view-settings">
     <div class="panel">
-      <h2>Default AI Agent</h2>
-      <div class="info-note">This is your <strong>Default AI Agent</strong> — used only when a chat has <strong>no AI Agent</strong> created or assigned. As soon as you create an agent (and it's active or assigned to a chat), that agent replies instead, using its own instructions and writing style. Assign a specific agent per chat from the chat panel.</div>
-      <label class="ai-toggle big">
-        <input type="checkbox" id="aiGlobal" />
-        <span>AI auto-replies enabled (master switch)</span>
-      </label>
-      <div class="info-note" style="font-size:12.5px">💡 To answer <strong>every</strong> chat with AI (sleep mode), use the <strong>“Answer every chat with AI”</strong> switch at the top of the <strong>Chats</strong> tab.</div>
+      <h2>AI replies</h2>
+      <div class="info-note">Zaply's auto-replies are powered entirely by your <strong>AI Agents</strong>. Build or edit them in the <strong>AI Agents</strong> tab — each agent has its own instructions, rules and writing style (and can learn your tone from imported chats). A conversation uses its assigned agent, otherwise your first active agent. <strong>If you have no active agent, Zaply won't auto-reply.</strong></div>
+      <div class="info-note" style="font-size:12.5px">💡 To turn AI on for <strong>every</strong> conversation at once, use the <strong>“Answer every chat with AI”</strong> switch at the top of the <strong>Chats</strong> tab. You can still switch AI off for any individual chat, and that always wins.</div>
       <label class="field">
-        <span>Business instructions — describe your business, products, prices, and tone</span>
-        <textarea id="aiPrompt" rows="10"></textarea>
+        <span>Handoff keywords (comma separated) — when a customer sends one of these, AI stays silent so you can reply manually</span>
+        <input id="aiHandoff" placeholder="e.g. human, agent, stop" />
       </label>
-      <label class="field">
-        <span>Handoff keywords (comma separated) — AI stays silent so you can reply manually</span>
-        <input id="aiHandoff" />
-      </label>
-      <button id="settingsSave">Save settings</button>
+      <button id="settingsSave">Save</button>
       <p class="saved-note hidden" id="savedNote">Saved.</p>
-
-      <hr style="border:none;border-top:1px solid var(--line-2);margin:28px 0" />
-      <h2 style="font-size:18px">Default AI Agent — writing style</h2>
-      <p class="panel-sub">Teach the Default AI Agent to reply in <strong>your</strong> voice. It studies the messages you've sent across all chats — your tone, formality, emoji and punctuation habits — so its replies sound like you. This style is used only when no AI Agent handles the chat. Available once you've sent 100+ messages (or import chat files below).</p>
-      <div id="ownerStyleStatus" class="info-note" style="display:none"></div>
-      <button class="primary-btn" id="learnStyleBtn">Learn my writing style</button>
-
-      <div class="style-import" style="margin-top:18px;padding:16px;border:1px dashed var(--line-2);border-radius:12px">
-        <div style="font-weight:600;margin-bottom:4px">⚡ Learn instantly from chat files</div>
-        <p class="panel-sub" style="margin:0 0 10px">Don't want to wait for 100 messages? Export a few of your real WhatsApp chats (chat → <strong>Export chat</strong> → Without media → unzip), then upload the <code>.txt</code> files here. The AI reads how you write and builds your global voice right away. You can upload several at once.</p>
-        <div class="modal-field" style="max-width:420px">
-          <label>Your name as it appears in the exports (optional)</label>
-          <input id="ownerImportName" placeholder="e.g. how WhatsApp shows your own name" />
-          <small style="color:var(--ink-3)">Helps isolate your messages from the customers'.</small>
-        </div>
-        <div class="modal-field" style="max-width:420px">
-          <label>Chat export files (.txt) — multiple allowed</label>
-          <input type="file" id="ownerImportFiles" accept=".txt,text/plain" multiple />
-        </div>
-        <button class="ghost-btn" id="ownerImportBtn">Learn my voice from these files</button>
-      </div>
-
-      <div id="ownerStyleBox" class="chat-summary hidden" style="margin-top:14px"></div>
     </div>
   </section>
 
