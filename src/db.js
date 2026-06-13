@@ -154,6 +154,7 @@ const migrationStmts = [
   "ALTER TABLE messages ADD COLUMN media_url TEXT",
   "ALTER TABLE messages ADD COLUMN status INTEGER",
   "ALTER TABLE chats ADD COLUMN phone TEXT",
+  "ALTER TABLE chats ADD COLUMN profile_pic TEXT",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -515,6 +516,12 @@ export const q = {
   setChatAi: db.prepare("UPDATE chats SET ai_enabled = ? WHERE tenant_id = ? AND jid = ?"),
   setChatLifecycle: db.prepare("UPDATE chats SET lifecycle = ? WHERE tenant_id = ? AND jid = ?"),
   setChatAgent: db.prepare("UPDATE chats SET agent_id = ? WHERE tenant_id = ? AND jid = ?"),
+  setChatAvatar: db.prepare("UPDATE chats SET profile_pic = ? WHERE tenant_id = ? AND jid = ?"),
+  // delete a conversation + everything attached to it
+  deleteChatRow: db.prepare("DELETE FROM chats WHERE tenant_id = ? AND jid = ?"),
+  deleteChatMessages: db.prepare("DELETE FROM messages WHERE tenant_id = ? AND jid = ?"),
+  deleteChatTagsAll: db.prepare("DELETE FROM chat_tags WHERE tenant_id = ? AND jid = ?"),
+  deleteChatNotesAll: db.prepare("DELETE FROM chat_notes WHERE tenant_id = ? AND jid = ?"),
   ensureChat: db.prepare(`
     INSERT INTO chats (tenant_id, jid, name, last_msg, last_ts, unread)
     VALUES (?, ?, ?, '', ?, 0)

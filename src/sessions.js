@@ -20,7 +20,29 @@ import { generateReply } from "./ai.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ROOT = path.join(__dirname, "..", "auth");
 const MEDIA_ROOT = path.join(__dirname, "..", "public", "media");
+const AVATAR_ROOT = path.join(__dirname, "..", "public", "avatars");
 const silentLogger = pino({ level: "silent" });
+
+/* Fetch a contact's WhatsApp profile photo (if public) and cache it locally.
+   Fire-and-forget; only runs when we don't already have one. */
+async function fetchAvatar(tenantId, jid, sock) {
+  try {
+    const chat = q.getChat.get(tenantId, jid);
+    if (chat?.profile_pic) return; // already have one
+    const url = await sock.profilePictureUrl(jid, "image").catch(() => null);
+    if (!url) return;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const dir = path.join(AVATAR_ROOT, tenantId.replace(/[^a-z0-9]/gi, ""));
+    fs.mkdirSync(dir, { recursive: true });
+    const fname = `${jid.replace(/[^a-z0-9]/gi, "_")}.jpg`;
+    fs.writeFileSync(path.join(dir, fname), buf);
+    const rel = `/avatars/${tenantId.replace(/[^a-z0-9]/gi, "")}/${fname}`;
+    q.setChatAvatar.run(rel, tenantId, jid);
+    broadcast(tenantId, { type: "avatar", data: { jid, url: rel } });
+  } catch (err) { /* private pic / not authorized — ignore */ }
+}
 
 /* Map a WhatsApp media message node → a file extension + friendly label. */
 const MEDIA_KINDS = {
@@ -296,6 +318,7 @@ async function handleMessage(tenantId, sock, msg) {
     unread: fromMe ? 0 : 1,
   });
   if (phone) { try { q.setChatPhone.run(phone, tenantId, jid); } catch {} }
+  fetchAvatar(tenantId, jid, sock).catch(() => {}); // fire-and-forget profile photo
   broadcast(tenantId, {
     type: "message",
     data: { jid, from_me: fromMe, body, ts, name: msg.pushName || null,

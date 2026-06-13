@@ -136,6 +136,16 @@ function updatePairingBanner() {
   $("pairing").classList.toggle("hidden", !show);
 }
 
+// Click the small QR to open a large, easy-to-scan version
+$("qrImg").addEventListener("click", () => {
+  const src = $("qrImg").src;
+  if (!src) return;
+  $("qrModalImg").src = src;
+  $("qrModal").classList.remove("hidden");
+});
+$("qrModalClose").addEventListener("click", () => $("qrModal").classList.add("hidden"));
+$("qrModal").addEventListener("click", (e) => { if (e.target.id === "qrModal") $("qrModal").classList.add("hidden"); });
+
 $("connectBtn").addEventListener("click", async () => {
   $("connectBtn").disabled = true;
   $("pairingNote").textContent = "Generating QR…";
@@ -174,6 +184,14 @@ function handleWsEvent({ type, data }) {
   if (type === "quota_exceeded") toast("Conversation quota reached — upgrade your plan", "error");
   if (type === "status_update") updateMessageTick(data);
   if (type === "delivery_problem") showDeliveryBanner(data);
+  if (type === "avatar") {
+    const c = allChats.find((x) => x.jid === data.jid);
+    if (c) { c.profile_pic = data.url; renderChatList(); }
+    if (data.jid === activeJid) {
+      const av = $("convAvatar");
+      av.innerHTML = `<img class="avatar-img" src="${data.url}" alt="">`;
+    }
+  }
   if (type === "broadcast_progress") { if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
   if (type === "broadcast_done") { toast(`✅ Broadcast "${data.name}" finished sending`, "success"); if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
 }
@@ -250,7 +268,7 @@ function renderChatList() {
     const tags = (c.tags || []).map((t) => `<span class="tag-chip" style="font-size:10px;padding:1px 7px">${t}</span>`).join("");
     const lc = c.lifecycle || "new_lead";
     return `<div class="chat-item${c.jid === activeJid ? " active" : ""}" data-jid="${c.jid}">
-      <div class="chat-avatar ${avCls}">${init}</div>
+      <div class="chat-avatar ${avCls}">${c.profile_pic ? `<img class="avatar-img" src="${escHtml(c.profile_pic)}" alt="">` : init}</div>
       <div class="chat-body">
         <div class="chat-top">
           <span class="chat-name">${escHtml(c.name || formatJid(c.jid))}</span>
@@ -264,12 +282,27 @@ function renderChatList() {
           ${tags}
         </div>
       </div>
+      <button class="chat-del" data-jid="${escHtml(c.jid)}" title="Delete conversation">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+      </button>
     </div>`;
   }).join("");
 
   container.querySelectorAll(".chat-item").forEach((el) => {
     el.addEventListener("click", () => openChat(el.dataset.jid));
   });
+  container.querySelectorAll(".chat-del").forEach((b) => b.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const jid = b.dataset.jid;
+    if (!confirm("Delete this conversation from your inbox? This removes it here (it does not delete anything on WhatsApp).")) return;
+    const r = await DELETE(`/api/chats/${encodeURIComponent(jid)}`);
+    if (r?.ok) {
+      allChats = allChats.filter((c) => c.jid !== jid);
+      if (activeJid === jid) { activeJid = null; $("messages").innerHTML = ""; $("convName").textContent = "Select a chat"; $("chatDetail").classList.add("hidden"); $("composer").style.display = "none"; }
+      renderChatList(); updateUnreadBadge();
+      toast("Conversation deleted", "success");
+    } else toast(r?.error || "Couldn't delete", "error");
+  }));
 }
 
 function updateUnreadBadge() {
@@ -367,10 +400,11 @@ async function openChat(jid) {
   const init = initials(chat.name, jid);
   const avCls = avatarClass(jid);
 
-  // Header avatar
+  // Header avatar (photo if we have one, else initials)
   const av = $("convAvatar");
-  av.textContent = init;
   av.className = `conv-header-avatar ${avCls}`;
+  if (chat.profile_pic) av.innerHTML = `<img class="avatar-img" src="${escHtml(chat.profile_pic)}" alt="">`;
+  else av.textContent = init;
 
   // Extract raw phone number from JID
   const phone = jid.replace(/@s\.whatsapp\.net$/, "").replace(/@g\.us$/, "");
@@ -2583,11 +2617,14 @@ $("apptSave").addEventListener("click", async () => {
   const when = $("apptWhen").value;
   if (!title || !when) return toast("Title and date/time required", "error");
   const phone = $("apptPhone").value.trim().replace(/[^0-9]/g, "");
+  // Prefer the exact chat JID (so the confirmation lands in the SAME conversation,
+  // not a new one). Only fall back to building a phone JID for standalone bookings.
+  const chatJid = $("apptModal").dataset.jid || "";
   const body = {
     title, contact_name: $("apptContact").value.trim(),
     start_ts: new Date(when).getTime(), duration: parseInt($("apptDuration").value, 10) || 30,
     notes: $("apptNotes").value.trim(),
-    jid: phone ? `${phone}@s.whatsapp.net` : ($("apptModal").dataset.jid || null),
+    jid: chatJid || (phone ? `${phone}@s.whatsapp.net` : null),
     send_confirmation: $("apptConfirm").checked,
   };
   const r = id ? await PUT(`/api/appointments/${id}`, { ...body, status: "confirmed" }) : await POST("/api/appointments", body);

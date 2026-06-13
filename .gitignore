@@ -23,3 +23,6 @@ public/autologin.html
 
 # Received/sent media files (live on the server)
 public/media/
+
+# Cached profile photos
+public/avatars/

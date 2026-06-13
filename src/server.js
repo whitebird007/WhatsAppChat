@@ -515,6 +515,18 @@ app.post("/api/chats/ai", (req, res) => {
   res.json({ ok: true });
 });
 
+/* Delete a conversation (and its messages, tags, notes) from the portal.
+   Note: this only removes it here — it does not delete anything on WhatsApp. */
+app.delete("/api/chats/:jid", (req, res) => {
+  const jid = req.params.jid;
+  const t = req.tenant.id;
+  q.deleteChatMessages.run(t, jid);
+  q.deleteChatTagsAll.run(t, jid);
+  q.deleteChatNotesAll.run(t, jid);
+  q.deleteChatRow.run(t, jid);
+  res.json({ ok: true });
+});
+
 app.post("/api/chats/lifecycle", (req, res) => {
   const { jid, lifecycle } = req.body || {};
   if (!jid || !lifecycle) return res.status(400).json({ error: "jid and lifecycle required" });

@@ -142,7 +142,7 @@
   <div class="pairing-banner hidden" id="pairing">
     <div class="pairing-banner-inner">
       <div class="pairing-banner-left">
-        <div class="qr-frame-sm"><img id="qrImg" alt="QR code" style="width:90px;height:90px;object-fit:contain;" /></div>
+        <div class="qr-frame-sm"><img id="qrImg" alt="QR code" title="Click to enlarge" style="width:90px;height:90px;object-fit:contain;cursor:pointer;" /></div>
       </div>
       <div class="pairing-banner-body">
         <h2 style="font-size:15px;font-weight:700;margin:0 0 4px">Connect WhatsApp</h2>
@@ -1148,6 +1148,20 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
       <button class="modal-close" id="paletteClose">×</button>
     </div>
     <div class="palette-grid" id="paletteGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ QR ENLARGE MODAL ═══ -->
+<div class="modal-overlay hidden" id="qrModal">
+  <div class="modal-card" style="width:auto;max-width:420px;text-align:center">
+    <div class="modal-header">
+      <span class="modal-title">Scan to connect WhatsApp</span>
+      <button class="modal-close" id="qrModalClose">×</button>
+    </div>
+    <div style="background:#fff;padding:16px;border-radius:14px;display:inline-block">
+      <img id="qrModalImg" alt="QR code" style="width:320px;height:320px;display:block" />
+    </div>
+    <p style="font-size:13px;color:var(--ink-3);margin-top:14px;line-height:1.6">Open WhatsApp on your phone → <strong>Settings</strong> → <strong>Linked devices</strong> → <strong>Link a device</strong>, then point your camera here.</p>
   </div>
 </div>
 
