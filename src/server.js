@@ -1553,7 +1553,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.9 (relocatable DATA_DIR for persistence, message sound)";
+const APP_VERSION = "v0.5.0 (Zaply favicon + logo)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
