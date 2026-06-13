@@ -195,6 +195,18 @@ export async function startSession(tenantId) {
       }
     }
   });
+
+  // Delivery receipts: WhatsApp reports sent → delivered → read for our outgoing messages.
+  sock.ev.on("messages.update", (updates) => {
+    for (const u of updates) {
+      const st = u.update?.status;
+      if (st == null || !u.key?.id || !u.key?.fromMe) continue;
+      const status = typeof st === "number" ? st : ({ PENDING: 1, SERVER_ACK: 2, DELIVERY_ACK: 3, READ: 4, PLAYED: 5, ERROR: 0 }[st] ?? null);
+      if (status == null) continue;
+      q.setMessageStatus.run(status, tenantId, u.key.id);
+      broadcast(tenantId, { type: "status_update", data: { jid: u.key.remoteJid, id: u.key.id, status } });
+    }
+  });
 }
 
 async function handleMessage(tenantId, sock, msg) {
@@ -222,6 +234,7 @@ async function handleMessage(tenantId, sock, msg) {
     mime_type: media?.mime_type || null,
     file_name: media?.file_name || null,
     media_url: media?.media_url || null,
+    status: fromMe ? 2 : null,
   });
   q.upsertChat.run({
     tenant_id: tenantId,
@@ -234,7 +247,8 @@ async function handleMessage(tenantId, sock, msg) {
   broadcast(tenantId, {
     type: "message",
     data: { jid, from_me: fromMe, body, ts, name: msg.pushName || null,
-      mime_type: media?.mime_type || null, file_name: media?.file_name || null, media_url: media?.media_url || null },
+      mime_type: media?.mime_type || null, file_name: media?.file_name || null, media_url: media?.media_url || null,
+      id: msg.key.id, status: fromMe ? 2 : null },
   });
 
   if (fromMe) return;
@@ -297,7 +311,11 @@ async function handleMessage(tenantId, sock, msg) {
   if (globalAi && chat?.ai_enabled) {
     const reply = await generateReply(tenantId, jid);
     if (reply) {
-      await new Promise((r) => setTimeout(r, 1500 + Math.random() * 2000));
+      // Human-like: show "typing…", then wait ~3–10s scaled to reply length, then send.
+      try { await sock.sendPresenceUpdate("composing", jid); } catch {}
+      const delay = Math.min(10000, 2500 + reply.length * 35 + Math.random() * 1500);
+      await new Promise((r) => setTimeout(r, delay));
+      try { await sock.sendPresenceUpdate("paused", jid); } catch {}
       await sendText(tenantId, jid, reply, "ai");
     }
   }
@@ -322,8 +340,9 @@ export async function sendText(tenantId, jid, text, via = "human") {
   }
   const sent = await session.sock.sendMessage(jid, { text });
   const ts = Date.now();
+  const id = sent?.key?.id || `local-${ts}`;
   q.insertMessage.run({
-    id: sent?.key?.id || `local-${ts}`,
+    id,
     tenant_id: tenantId,
     jid,
     from_me: 1,
@@ -333,9 +352,10 @@ export async function sendText(tenantId, jid, text, via = "human") {
     mime_type: null,
     file_name: null,
     media_url: null,
+    status: 2,
   });
   q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: text, last_ts: ts, unread: 0 });
-  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body: text, ts, via } });
+  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body: text, ts, via, id, status: 2 } });
   return sent;
 }
 
@@ -373,10 +393,11 @@ export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, capti
 
   const sent = await session.sock.sendMessage(jid, msgContent);
   const ts = Date.now();
+  const id = sent?.key?.id || `local-${ts}`;
   const media_url = saveOutgoingMedia(tenantId, buffer, mimeType, kind);
   const body = caption || (voice ? "🎤 Voice message" : fileName) || "📎 Attachment";
   q.insertMessage.run({
-    id: sent?.key?.id || `local-${ts}`,
+    id,
     tenant_id: tenantId,
     jid,
     from_me: 1,
@@ -386,9 +407,10 @@ export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, capti
     mime_type: mimeType,
     file_name: voice ? "Voice note" : fileName,
     media_url,
+    status: 2,
   });
   q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: body, last_ts: ts, unread: 0 });
-  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body, ts, via: "human", mime_type: mimeType, file_name: voice ? "Voice note" : fileName, media_url } });
+  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body, ts, via: "human", mime_type: mimeType, file_name: voice ? "Voice note" : fileName, media_url, id, status: 2 } });
   return sent;
 }
 

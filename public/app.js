@@ -172,6 +172,7 @@ function handleWsEvent({ type, data }) {
   if (type === "status") renderStatus(data);
   if (type === "message") handleIncomingMessage(data);
   if (type === "quota_exceeded") toast("Conversation quota reached — upgrade your plan", "error");
+  if (type === "status_update") updateMessageTick(data);
   if (type === "broadcast_progress") { if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
   if (type === "broadcast_done") { toast(`✅ Broadcast "${data.name}" finished sending`, "success"); if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
 }
@@ -587,12 +588,23 @@ function renderMessages(msgs) {
   container.scrollTop = container.scrollHeight;
 }
 
+function statusTick(status) {
+  // 0 ERROR · 1 pending · 2 sent · 3 delivered · 4/5 read
+  if (status === 0) return `<span class="tick failed" title="Failed to send">✕</span>`;
+  if (status == null || status === 1) return `<span class="tick pending" title="Sending…">🕓</span>`;
+  if (status === 2) return `<span class="tick sent" title="Sent to WhatsApp">✓</span>`;
+  if (status === 3) return `<span class="tick delivered" title="Delivered">✓✓</span>`;
+  return `<span class="tick read" title="Read">✓✓</span>`; // 4 or 5
+}
+
 function renderBubble(m) {
   const cls = m.from_me ? "out" : "in";
   const time = new Date(m.ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const tick = m.from_me ? statusTick(m.status) : "";
+  const idAttr = m.id ? ` data-id="${escHtml(m.id)}"` : "";
 
   const metaInner = m.from_me
-    ? `${m.via === "ai" ? `<span class="via-pill via-ai">AI</span>` : m.via === "rule" ? `<span class="via-pill via-rule">Rule</span>` : ""}<span>${time}</span>`
+    ? `${m.via === "ai" ? `<span class="via-pill via-ai">AI</span>` : m.via === "rule" ? `<span class="via-pill via-rule">Rule</span>` : ""}<span>${time}</span>${tick}`
     : `<span>${time}</span>`;
   const meta = `<div class="bubble-meta">${metaInner}</div>`;
 
@@ -610,19 +622,28 @@ function renderBubble(m) {
     } else {
       inner = `<a class="media-doc" href="${m.media_url}" target="_blank" download><span class="media-doc-icon">📄</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || "Document")}</span><span class="media-doc-sub">Tap to download</span></span></a>`;
     }
-    return `<div class="bubble media ${cls}">${inner}${meta}</div>`;
+    return `<div class="bubble media ${cls}"${idAttr}>${inner}${meta}</div>`;
   }
 
   // Media we couldn't download (rare) — show a small placeholder
   if (m.mime_type) {
-    return `<div class="bubble media ${cls}"><div class="media-doc"><span class="media-doc-icon">📎</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || m.body || "Attachment")}</span><span class="media-doc-sub">${escHtml(m.mime_type)}</span></span></div>${meta}</div>`;
+    return `<div class="bubble media ${cls}"${idAttr}><div class="media-doc"><span class="media-doc-icon">📎</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || m.body || "Attachment")}</span><span class="media-doc-sub">${escHtml(m.mime_type)}</span></span></div>${meta}</div>`;
   }
 
-  return `<div class="bubble ${cls}">${escHtml(m.body)}${meta}</div>`;
+  return `<div class="bubble ${cls}"${idAttr}>${escHtml(m.body)}${meta}</div>`;
+}
+
+// Live-update a sent message's delivery tick (✓ → ✓✓ → read / ✕ failed)
+function updateMessageTick(data) {
+  if (data.jid !== activeJid || !data.id) return;
+  const bubble = $("messages").querySelector(`.bubble[data-id="${CSS.escape(data.id)}"]`);
+  if (!bubble) return;
+  const old = bubble.querySelector(".tick");
+  if (old) old.outerHTML = statusTick(data.status);
 }
 
 function handleIncomingMessage(data) {
-  const { jid, from_me, body, ts, name, via, mime_type, file_name, media_url } = data;
+  const { jid, from_me, body, ts, name, via, mime_type, file_name, media_url, id, status } = data;
 
   // Update chat in list
   const existing = allChats.find((c) => c.jid === jid);
@@ -638,7 +659,7 @@ function handleIncomingMessage(data) {
 
   // Append to active conversation
   if (jid === activeJid) {
-    const msg = { from_me: !!from_me, body, ts, via, mime_type, file_name, media_url };
+    const msg = { from_me: !!from_me, body, ts, via, mime_type, file_name, media_url, id, status };
     const container = $("messages");
     const el = document.createElement("div");
     el.innerHTML = renderBubble(msg);

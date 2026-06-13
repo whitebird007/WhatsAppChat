@@ -2798,3 +2798,15 @@ input::placeholder, textarea::placeholder { color: var(--ink-4); }
 .comp-icon.recording { color: #fff; background: var(--danger); animation: recPulse 1.2s ease-in-out infinite; }
 @keyframes recPulse { 0%, 100% { box-shadow: 0 0 0 0 oklch(0.5 0.19 27 / 0.5); } 50% { box-shadow: 0 0 0 7px oklch(0.5 0.19 27 / 0); } }
 @media (prefers-reduced-motion: reduce) { .comp-icon.recording { animation: none; } }
+
+/* Delivery status ticks on sent messages */
+.bubble-meta .tick { font-size: 11px; margin-left: 3px; line-height: 1; }
+.tick.pending { opacity: 0.6; font-size: 9px; }
+.tick.sent { color: var(--ink-4); }
+.bubble.out .tick.sent { color: oklch(1 0 0 / 0.6); }
+.tick.delivered { color: var(--ink-4); letter-spacing: -2px; }
+.bubble.out .tick.delivered { color: oklch(1 0 0 / 0.65); letter-spacing: -2px; }
+.tick.read { color: oklch(0.65 0.15 230); letter-spacing: -2px; font-weight: 700; }
+.bubble.out .tick.read { color: oklch(0.78 0.13 220); letter-spacing: -2px; font-weight: 700; }
+.tick.failed { color: oklch(0.7 0.2 25); font-weight: 700; }
+.bubble.out .tick.failed { color: oklch(0.85 0.16 25); font-weight: 700; }

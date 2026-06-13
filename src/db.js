@@ -152,6 +152,7 @@ const migrationStmts = [
   "ALTER TABLE messages ADD COLUMN mime_type TEXT",
   "ALTER TABLE messages ADD COLUMN file_name TEXT",
   "ALTER TABLE messages ADD COLUMN media_url TEXT",
+  "ALTER TABLE messages ADD COLUMN status INTEGER",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -519,9 +520,10 @@ export const q = {
 
   // messages
   insertMessage: db.prepare(`
-    INSERT OR IGNORE INTO messages (id, tenant_id, jid, from_me, body, ts, via, mime_type, file_name, media_url)
-    VALUES (@id, @tenant_id, @jid, @from_me, @body, @ts, @via, @mime_type, @file_name, @media_url)
+    INSERT OR IGNORE INTO messages (id, tenant_id, jid, from_me, body, ts, via, mime_type, file_name, media_url, status)
+    VALUES (@id, @tenant_id, @jid, @from_me, @body, @ts, @via, @mime_type, @file_name, @media_url, @status)
   `),
+  setMessageStatus: db.prepare("UPDATE messages SET status = ? WHERE tenant_id = ? AND id = ?"),
   listMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts ASC LIMIT 500"),
   recentMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts DESC LIMIT ?"),
   countRecentAiReplies: db.prepare("SELECT COUNT(*) AS n FROM messages WHERE tenant_id = ? AND jid = ? AND via = 'ai' AND ts > ?"),
