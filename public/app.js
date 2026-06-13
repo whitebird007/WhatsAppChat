@@ -50,6 +50,58 @@ function toast(msg, type = "") {
 }
 
 /* ============================================================
+   NOTIFICATION SOUND (incoming message ping)
+   ============================================================ */
+let soundOn = localStorage.getItem("zaply_sound") !== "0";
+let _audioCtx = null;
+let _lastPing = 0;
+function notifyPing() {
+  if (!soundOn) return;
+  const now = Date.now();
+  if (now - _lastPing < 1200) return; // don't machine-gun on bursts
+  _lastPing = now;
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+    // Two-tone "ti-doo" chime, soft attack/decay.
+    const notes = [[880, 0], [1318.5, 0.12]];
+    for (const [freq, at] of notes) {
+      const t = ctx.currentTime + at;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.24);
+    }
+  } catch {}
+}
+function updateSoundBtn() {
+  const b = $("soundToggle");
+  if (!b) return;
+  b.classList.toggle("muted", !soundOn);
+  b.title = soundOn ? "Sound on for new messages — click to mute" : "Sound muted — click to enable";
+  b.innerHTML = soundOn
+    ? `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 6a8 8 0 010 12"/></svg>`
+    : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>`;
+}
+
+if ($("soundToggle")) {
+  $("soundToggle").addEventListener("click", () => {
+    soundOn = !soundOn;
+    localStorage.setItem("zaply_sound", soundOn ? "1" : "0");
+    updateSoundBtn();
+    if (soundOn) notifyPing(); // confirm with a sample chime
+  });
+  updateSoundBtn();
+}
+
+/* ============================================================
    LIFECYCLE HELPERS
    ============================================================ */
 const LIFECYCLE = {
@@ -750,6 +802,9 @@ function updateMessageTick(data) {
 
 function handleIncomingMessage(data) {
   const { jid, from_me, body, ts, name, via, mime_type, file_name, media_url, id, status } = data;
+
+  // Audible ping for genuinely new inbound messages (not your own, not history).
+  if (!from_me) notifyPing();
 
   // Update chat in list
   const existing = allChats.find((c) => c.jid === jid);

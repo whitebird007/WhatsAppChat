@@ -15,15 +15,18 @@ import path from "path";
 import { execFile } from "child_process";
 import ffmpegPath from "ffmpeg-static";
 import { fileURLToPath } from "url";
-import { q, getSetting, automationAllowed, convQuota, tenantActive } from "./db.js";
+import { q, getSetting, automationAllowed, convQuota, tenantActive, DATA_DIR } from "./db.js";
 import { runFlows } from "./flows.js";
 import { matchRule } from "./rules.js";
 import { generateReply } from "./ai.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const AUTH_ROOT = path.join(__dirname, "..", "auth");
-const MEDIA_ROOT = path.join(__dirname, "..", "public", "media");
-const AVATAR_ROOT = path.join(__dirname, "..", "public", "avatars");
+// When DATA_DIR is set (production), keep media/avatars/auth there so they
+// survive redeploys. Otherwise default to the in-repo locations (dev).
+const RUNTIME_DIR = process.env.DATA_DIR ? DATA_DIR : null;
+const AUTH_ROOT = path.join(RUNTIME_DIR || path.join(__dirname, ".."), "auth");
+const MEDIA_ROOT = RUNTIME_DIR ? path.join(RUNTIME_DIR, "media") : path.join(__dirname, "..", "public", "media");
+const AVATAR_ROOT = RUNTIME_DIR ? path.join(RUNTIME_DIR, "avatars") : path.join(__dirname, "..", "public", "avatars");
 const silentLogger = pino({ level: "silent" });
 
 /* Fetch a contact's WhatsApp profile photo (if public) and cache it locally.

@@ -139,6 +139,13 @@ input, textarea, select { font-family: inherit; }
 .brand-accent { color: var(--gold); }
 
 /* Connection status */
+.sound-toggle {
+  margin-left: auto; flex: none; width: 28px; height: 28px; display: grid; place-items: center;
+  border: none; border-radius: 8px; cursor: pointer; color: var(--sb-text-hi);
+  background: transparent; transition: background .15s, color .15s;
+}
+.sound-toggle:hover { background: var(--sb-hover); }
+.sound-toggle.muted { color: var(--sb-text); opacity: 0.6; }
 .conn {
   display: flex;
   align-items: center;

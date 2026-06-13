@@ -1,10 +1,23 @@
 import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const db = new DatabaseSync(path.join(__dirname, "..", "data.sqlite"));
+
+// Where persistent data lives. Set DATA_DIR (or DATABASE_PATH) to a directory
+// OUTSIDE the deployed code bundle so republishing never overwrites the live
+// database. Falls back to the repo root for local/dev use.
+export const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, "..");
+const DB_PATH = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.join(DATA_DIR, "data.sqlite");
+try { fs.mkdirSync(path.dirname(DB_PATH), { recursive: true }); } catch {}
+console.log(`[db] using ${DB_PATH}`);
+const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL;");
 
 db.exec(`

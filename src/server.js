@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import { q, getSetting, convQuota, tenantActive, PLANS, getPlans, newId, LIFECYCLE_LABELS, ensureStages } from "./db.js";
+import { q, getSetting, convQuota, tenantActive, PLANS, getPlans, newId, LIFECYCLE_LABELS, ensureStages, DATA_DIR } from "./db.js";
 import { validateFlow } from "./flows.js";
 import { signup, login, authMiddleware, verifyToken, createOrganization, switchOrg, hashPassword, verifyPassword, signToken } from "./auth.js";
 import {
@@ -57,7 +57,8 @@ app.get("/:kind(media|avatars)/:tenant/:file", (req, res) => {
   const payload = req.query.t && verifyToken(String(req.query.t));
   if (!payload) return res.status(401).end();
   if (!q.getMembership.get(payload.uid, tenant)) return res.status(403).end();
-  res.sendFile(path.join(PUBLIC_DIR, kind, tenant, file));
+  const base = process.env.DATA_DIR ? DATA_DIR : PUBLIC_DIR;
+  res.sendFile(path.join(base, kind, tenant, file));
 });
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
@@ -1552,7 +1553,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.8 (AI-on-all-chats sleep mode with per-chat override)";
+const APP_VERSION = "v0.4.9 (relocatable DATA_DIR for persistence, message sound)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
