@@ -1424,7 +1424,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.3 (feed-chat-history-import)";
+const APP_VERSION = "v0.3.4 (per-thread-style-overrides-global)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);

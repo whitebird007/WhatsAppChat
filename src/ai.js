@@ -212,10 +212,18 @@ function buildSystemPrompt(tenantId, agent, chat = null) {
    customer's communication style. Appended to every AI reply so it sounds natural. */
 function behaviourAddendum(tenantId, chat) {
   let extra = "";
-  const ownerStyle = getSetting(tenantId, "owner_style");
-  if (ownerStyle) extra += `\n\n## Write in the business owner's voice:\n${ownerStyle}`;
-  if (chat?.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
-  if (chat?.ai_style) extra += `\n\n## How this customer communicates (mirror it naturally):\n${chat.ai_style}`;
+  // Precedence: a thread that has its OWN learned style (from imported history
+  // or from reaching the learn threshold) wins — the global owner style is
+  // suppressed for that thread so the AI replies in this conversation's voice.
+  // Only chats with no per-thread style fall back to the global owner voice.
+  if (chat?.ai_style) {
+    if (chat.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
+    extra += `\n\n## Reply in THIS conversation's established style (mirror it naturally):\n${chat.ai_style}`;
+  } else {
+    const ownerStyle = getSetting(tenantId, "owner_style");
+    if (ownerStyle) extra += `\n\n## Write in the business owner's voice:\n${ownerStyle}`;
+    if (chat?.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
+  }
   return extra;
 }
 
