@@ -118,6 +118,9 @@ document.querySelectorAll(".nav-btn[data-view]").forEach((btn) => {
    ============================================================ */
 let connStatus = "connecting";
 let activeView = "chats";
+let aiAllChats = false; // global "answer every chat" switch (sleep mode)
+// Effective AI state for a chat: a per-chat opt-out wins; otherwise global-all OR per-chat opt-in.
+const chatAiOn = (c) => (c && c.ai_off ? false : (aiAllChats || !!(c && c.ai_enabled)));
 
 function renderStatus(s) {
   const dot = $("connDot");
@@ -295,7 +298,7 @@ function renderChatList() {
         <div class="chat-preview">${escHtml(c.last_msg || "")}</div>
         <div class="chat-badges" style="gap:4px;margin-top:4px">
           ${c.unread ? `<span class="badge badge-unread">${c.unread}</span>` : ""}
-          ${c.ai_enabled ? `<span class="badge badge-ai">AI</span>` : ""}
+          ${chatAiOn(c) ? `<span class="badge badge-ai">AI</span>` : ""}
           ${lifecycleBadge(lc)}
           ${tags}
         </div>
@@ -479,7 +482,7 @@ async function openChat(jid) {
 function renderConvHeaderRight(chat) {
   const jid = chat.jid;
   const right = $("convHeaderRight");
-  const on = !!chat.ai_enabled;
+  const on = chatAiOn(chat);
   right.innerHTML = `
     <div class="ai-switch${on ? " on" : ""}" id="aiSwitch" role="switch" aria-checked="${on}" tabindex="0" title="When on, your AI agent replies to this chat automatically">
       <svg class="ai-switch-icon" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10 1.5l1.8 5.2 5.2 1.8-5.2 1.8L10 15.5l-1.8-5.2L3 8.5l5.2-1.8z"/></svg>
@@ -491,8 +494,10 @@ function renderConvHeaderRight(chat) {
     </button>`;
 
   const toggleAi = async () => {
-    const enabled = !chat.ai_enabled;
+    const enabled = !chatAiOn(chat);
+    // Mirror the server: enable = opt-in; disable = hard opt-out (overrides global-all)
     chat.ai_enabled = enabled ? 1 : 0;
+    chat.ai_off = enabled ? 0 : 1;
     const sw = $("aiSwitch");
     sw.classList.toggle("on", enabled);
     sw.setAttribute("aria-checked", String(enabled));
@@ -753,7 +758,7 @@ function handleIncomingMessage(data) {
     existing.last_ts = ts;
     if (!from_me && jid !== activeJid) existing.unread = (existing.unread || 0) + 1;
   } else {
-    allChats.unshift({ jid, name: name || null, last_msg: body, last_ts: ts, unread: from_me ? 0 : 1, ai_enabled: 0, lifecycle: "new_lead", tags: [] });
+    allChats.unshift({ jid, name: name || null, last_msg: body, last_ts: ts, unread: from_me ? 0 : 1, ai_enabled: 0, ai_off: 0, lifecycle: "new_lead", tags: [] });
   }
   renderChatList();
   updateUnreadBadge();
@@ -1253,6 +1258,8 @@ $("ruleAdd").addEventListener("click", async () => {
 async function loadSettings() {
   const s = await GET("/api/settings");
   $("aiGlobal").checked = s?.ai_global_enabled === "1";
+  $("aiAllChats").checked = s?.ai_all_chats === "1";
+  aiAllChats = s?.ai_all_chats === "1";
   $("aiPrompt").value = s?.ai_system_prompt || "";
   $("aiHandoff").value = s?.ai_handoff_keywords || "";
   loadOwnerStyle();
@@ -1313,10 +1320,13 @@ $("ownerImportBtn").addEventListener("click", async () => {
 $("settingsSave").addEventListener("click", async () => {
   const r = await POST("/api/settings", {
     ai_global_enabled: $("aiGlobal").checked ? "1" : "0",
+    ai_all_chats: $("aiAllChats").checked ? "1" : "0",
     ai_system_prompt: $("aiPrompt").value,
     ai_handoff_keywords: $("aiHandoff").value,
   });
   if (r?.ok) {
+    aiAllChats = $("aiAllChats").checked;
+    renderChatList();
     $("savedNote").classList.remove("hidden");
     setTimeout(() => $("savedNote").classList.add("hidden"), 2000);
   }
@@ -3176,6 +3186,8 @@ async function init() {
   // Load account + org info
   const me = await GET("/api/me");
   applyMe(me);
+  // Global AI "all chats" state (drives effective per-chat AI display)
+  try { const s = await GET("/api/settings"); aiAllChats = s?.ai_all_chats === "1"; } catch {}
 
   // Load status
   const status = await GET("/api/status");

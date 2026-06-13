@@ -605,8 +605,17 @@ app.post("/api/ai/learn-style-from-files", upload.array("files", 20), async (req
 app.post("/api/chats/ai", (req, res) => {
   const { jid, enabled } = req.body || {};
   if (!jid) return res.status(400).json({ error: "jid required" });
-  q.setChatAi.run(enabled ? 1 : 0, req.tenant.id, jid);
+  // enabled -> opt-in (ai_enabled=1, clear opt-out); disabled -> hard opt-out
+  // (ai_off=1) so it stays off even when "AI on all chats" is active.
+  q.setChatAiState.run(enabled ? 1 : 0, enabled ? 0 : 1, req.tenant.id, jid);
   res.json({ ok: true });
+});
+
+// Global "AI on every chat" switch (sleep mode). When on, every chat is
+// answered except those individually opted out. Per-chat opt-outs persist.
+app.post("/api/ai/all-chats", (req, res) => {
+  q.setSetting.run(req.tenant.id, "ai_all_chats", req.body?.enabled ? "1" : "0");
+  res.json({ ok: true, enabled: !!req.body?.enabled });
 });
 
 /* Delete a conversation (and its messages, tags, notes) from the portal.
@@ -705,12 +714,13 @@ app.get("/api/settings", (req, res) => {
   const t = req.tenant.id;
   res.json({
     ai_global_enabled: getSetting(t, "ai_global_enabled"),
+    ai_all_chats: getSetting(t, "ai_all_chats"),
     ai_system_prompt: getSetting(t, "ai_system_prompt"),
     ai_handoff_keywords: getSetting(t, "ai_handoff_keywords"),
   });
 });
 app.post("/api/settings", (req, res) => {
-  const allowed = ["ai_global_enabled", "ai_system_prompt", "ai_handoff_keywords"];
+  const allowed = ["ai_global_enabled", "ai_all_chats", "ai_system_prompt", "ai_handoff_keywords"];
   for (const key of allowed) {
     if (key in (req.body || {})) q.setSetting.run(req.tenant.id, key, String(req.body[key]));
   }
@@ -1542,7 +1552,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.4.7 (auth-upload fix, DB-backed WhatsApp session persistence)";
+const APP_VERSION = "v0.4.8 (AI-on-all-chats sleep mode with per-chat override)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);

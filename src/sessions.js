@@ -460,8 +460,13 @@ async function handleMessage(tenantId, sock, msg) {
   // 3) AI agent — only if no flow, no rule, and no active follow-up claimed it.
   //    Order of precedence: flows → auto-reply rules → follow-ups → AI.
   const globalAi = getSetting(tenantId, "ai_global_enabled") === "1";
+  const aiAllChats = getSetting(tenantId, "ai_all_chats") === "1";
   const chat = q.getChat.get(tenantId, jid);
-  if (globalAi && chat?.ai_enabled && !inFollowUp) {
+  // Effective AI for this chat:
+  //   - a per-chat opt-out (ai_off) always wins (overrides the global switch),
+  //   - otherwise: on if "all chats" is enabled, or this chat is individually enabled.
+  const chatAiOn = chat ? (chat.ai_off ? false : (aiAllChats || !!chat.ai_enabled)) : aiAllChats;
+  if (globalAi && chatAiOn && !inFollowUp) {
     let reply = null;
     try {
       reply = await generateReply(tenantId, jid);

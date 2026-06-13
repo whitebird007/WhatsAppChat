@@ -158,6 +158,7 @@ const migrationStmts = [
   "ALTER TABLE chats ADD COLUMN ai_summary TEXT",
   "ALTER TABLE chats ADD COLUMN ai_style TEXT",
   "ALTER TABLE agents ADD COLUMN writing_style TEXT",
+  "ALTER TABLE chats ADD COLUMN ai_off INTEGER DEFAULT 0",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -526,6 +527,8 @@ export const q = {
   listUnreadChats: db.prepare("SELECT * FROM chats WHERE tenant_id = ? AND unread > 0 ORDER BY last_ts DESC LIMIT 200"),
   getChat: db.prepare("SELECT * FROM chats WHERE tenant_id = ? AND jid = ?"),
   setChatAi: db.prepare("UPDATE chats SET ai_enabled = ? WHERE tenant_id = ? AND jid = ?"),
+  // Per-chat AI state with explicit opt-out (ai_off overrides the global "all chats" switch)
+  setChatAiState: db.prepare("UPDATE chats SET ai_enabled = ?, ai_off = ? WHERE tenant_id = ? AND jid = ?"),
   setChatLifecycle: db.prepare("UPDATE chats SET lifecycle = ? WHERE tenant_id = ? AND jid = ?"),
   setChatAgent: db.prepare("UPDATE chats SET agent_id = ? WHERE tenant_id = ? AND jid = ?"),
   setChatAvatar: db.prepare("UPDATE chats SET profile_pic = ? WHERE tenant_id = ? AND jid = ?"),
