@@ -484,12 +484,14 @@ app.post("/api/send-to-phone", async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-/* Send media attachment */
+/* Send media attachment (set voice=1 for a true WhatsApp voice message) */
 app.post("/api/send-media", upload.single("file"), async (req, res) => {
-  const { jid, caption } = req.body || {};
+  const { jid, caption, voice } = req.body || {};
   if (!jid || !req.file) return res.status(400).json({ error: "jid and file required" });
   try {
-    await sendMedia(req.tenant.id, jid, req.file.buffer, req.file.mimetype, req.file.originalname, caption || "");
+    const isVoice = voice === "1" || voice === "true";
+    const mime = isVoice ? "audio/ogg; codecs=opus" : req.file.mimetype;
+    await sendMedia(req.tenant.id, jid, req.file.buffer, mime, req.file.originalname, caption || "", isVoice);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

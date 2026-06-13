@@ -2,6 +2,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   DisconnectReason,
+  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
@@ -15,6 +16,49 @@ import { generateReply } from "./ai.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ROOT = path.join(__dirname, "..", "auth");
+const MEDIA_ROOT = path.join(__dirname, "..", "public", "media");
+const silentLogger = pino({ level: "silent" });
+
+/* Map a WhatsApp media message node → a file extension + friendly label. */
+const MEDIA_KINDS = {
+  imageMessage: "image", videoMessage: "video", audioMessage: "audio",
+  documentMessage: "document", stickerMessage: "sticker",
+};
+function extFromMime(mime, kind) {
+  const sub = (mime || "").split(";")[0].split("/")[1] || "";
+  const map = { jpeg: "jpg", mpeg: "mp3", "x-m4a": "m4a", quicktime: "mov", "svg+xml": "svg", plain: "txt" };
+  if (map[sub]) return map[sub];
+  if (sub) return sub.replace(/[^a-z0-9]/gi, "") || "bin";
+  return kind === "audio" ? "ogg" : kind === "image" ? "jpg" : kind === "video" ? "mp4" : "bin";
+}
+
+/* Download an incoming media message, save it under /public/media, return its info (or null). */
+async function saveIncomingMedia(tenantId, msg, sock) {
+  const m = msg.message || {};
+  const inner = m.ephemeralMessage?.message || m.viewOnceMessage?.message || m;
+  const typeKey = Object.keys(MEDIA_KINDS).find((k) => inner[k]);
+  if (!typeKey) return null;
+  const node = inner[typeKey];
+  const kind = MEDIA_KINDS[typeKey];
+  let buffer;
+  try {
+    buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: silentLogger, reuploadRequest: sock.updateMediaMessage });
+  } catch (err) { console.error(`[media:${tenantId}] download failed:`, err.message); return null; }
+  if (!buffer) return null;
+
+  const mime = node.mimetype || (kind === "audio" ? "audio/ogg" : kind === "image" ? "image/jpeg" : "application/octet-stream");
+  const id = (msg.key?.id || `m${Date.now()}`).replace(/[^a-z0-9]/gi, "");
+  const fileName = node.fileName || (kind === "audio" && node.ptt ? "Voice note" : `${kind}.${extFromMime(mime, kind)}`);
+  const stored = `${id}.${extFromMime(mime, kind)}`;
+  const dir = path.join(MEDIA_ROOT, tenantId);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, stored), buffer);
+
+  const body = node.caption || (kind === "audio" && node.ptt ? "🎤 Voice message"
+    : kind === "image" ? "📷 Photo" : kind === "video" ? "🎬 Video"
+    : kind === "document" ? `📎 ${fileName}` : kind === "sticker" ? "🌟 Sticker" : "📎 Attachment");
+  return { mime_type: mime, file_name: fileName, media_url: `/media/${tenantId}/${stored}`, body };
+}
 
 /** tenantId -> { sock, status, qrDataUrl, me, stopping } */
 const sessions = new Map();
@@ -131,34 +175,40 @@ async function handleMessage(tenantId, sock, msg) {
   const jid = msg.key.remoteJid;
   if (!jid || jid === "status@broadcast" || jid.endsWith("@g.us")) return;
 
-  const text = extractText(msg);
-  if (!text) return;
-
   const fromMe = !!msg.key.fromMe;
   const ts = (Number(msg.messageTimestamp) || Math.floor(Date.now() / 1000)) * 1000;
+
+  // Text and/or media — download any attachment (photo, video, voice note, document)
+  const text = extractText(msg);
+  const media = await saveIncomingMedia(tenantId, msg, sock);
+  if (!text && !media) return; // not a message type we handle (reactions, receipts, etc.)
+
+  const body = text || media?.body || "";
 
   q.insertMessage.run({
     id: msg.key.id,
     tenant_id: tenantId,
     jid,
     from_me: fromMe ? 1 : 0,
-    body: text,
+    body,
     ts,
     via: fromMe ? "human" : "customer",
-    mime_type: null,
-    file_name: null,
+    mime_type: media?.mime_type || null,
+    file_name: media?.file_name || null,
+    media_url: media?.media_url || null,
   });
   q.upsertChat.run({
     tenant_id: tenantId,
     jid,
     name: msg.pushName || null,
-    last_msg: text,
+    last_msg: body,
     last_ts: ts,
     unread: fromMe ? 0 : 1,
   });
   broadcast(tenantId, {
     type: "message",
-    data: { jid, from_me: fromMe, body: text, ts, name: msg.pushName || null },
+    data: { jid, from_me: fromMe, body, ts, name: msg.pushName || null,
+      mime_type: media?.mime_type || null, file_name: media?.file_name || null, media_url: media?.media_url || null },
   });
 
   if (fromMe) return;
@@ -170,7 +220,7 @@ async function handleMessage(tenantId, sock, msg) {
   } catch {}
 
   // Click-to-WhatsApp source tracking: a lead arriving from a tracked link carries "(ref: xxx)"
-  const refMatch = text.match(/\(ref:\s*([a-z0-9]+)\)/i);
+  const refMatch = (text || "").match(/\(ref:\s*([a-z0-9]+)\)/i);
   if (refMatch) {
     const src = q.getLeadSourceByRef.get(tenantId, refMatch[1].toLowerCase());
     if (src) {
@@ -195,21 +245,21 @@ async function handleMessage(tenantId, sock, msg) {
   // 1) Flows (multi-step sequences) take priority
   const flowEffects = {
     handoff: () => {
-      q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: text, last_ts: ts, unread: 1 });
+      q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: body, last_ts: ts, unread: 1 });
       broadcast(tenantId, { type: "handoff", data: { jid } });
       fireWebhook(tenantId, { event: "handoff.requested", jid, ts: Date.now() });
     },
     enableAi: () => q.setChatAi.run(1, tenantId, jid),
   };
   const handledByFlow = await runFlows(
-    tenantId, jid, text,
+    tenantId, jid, text || "",
     (t) => sendText(tenantId, jid, t, "flow"),
     flowEffects
   );
   if (handledByFlow) return;
 
   // 2) Keyword rules
-  const ruleReply = matchRule(tenantId, text);
+  const ruleReply = matchRule(tenantId, text || "");
   if (ruleReply) {
     await sendText(tenantId, jid, ruleReply, "rule");
     return;
@@ -256,34 +306,41 @@ export async function sendText(tenantId, jid, text, via = "human") {
     via,
     mime_type: null,
     file_name: null,
+    media_url: null,
   });
   q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: text, last_ts: ts, unread: 0 });
   broadcast(tenantId, { type: "message", data: { jid, from_me: true, body: text, ts, via } });
   return sent;
 }
 
+/* Save an outgoing media buffer so it can be displayed in the chat afterwards. */
+function saveOutgoingMedia(tenantId, buffer, mimeType, kind) {
+  const id = `out${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+  const stored = `${id}.${extFromMime(mimeType, kind)}`;
+  const dir = path.join(MEDIA_ROOT, tenantId);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, stored), buffer);
+  return `/media/${tenantId}/${stored}`;
+}
+
 /**
- * Send a media file (image, document, video, audio) to a JID.
- * buffer: Buffer, mimeType: string, fileName: string, caption: string
+ * Send a media file (image, document, video, audio, or voice note) to a JID.
+ * Pass voice=true to send a true WhatsApp voice message (push-to-talk).
  */
-export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, caption = "") {
+export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, caption = "", voice = false) {
   const session = sessions.get(tenantId);
   if (!session || session.status !== "connected") throw new Error("WhatsApp is not connected");
 
-  let msgContent;
-  if (mimeType.startsWith("image/")) {
-    msgContent = { image: buffer, caption, mimetype: mimeType };
-  } else if (mimeType.startsWith("video/")) {
-    msgContent = { video: buffer, caption, mimetype: mimeType };
-  } else if (mimeType.startsWith("audio/")) {
-    msgContent = { audio: buffer, mimetype: mimeType, ptt: false };
-  } else {
-    msgContent = { document: buffer, mimetype: mimeType, fileName, caption };
-  }
+  let msgContent, kind;
+  if (mimeType.startsWith("image/")) { msgContent = { image: buffer, caption, mimetype: mimeType }; kind = "image"; }
+  else if (mimeType.startsWith("video/")) { msgContent = { video: buffer, caption, mimetype: mimeType }; kind = "video"; }
+  else if (mimeType.startsWith("audio/")) { msgContent = { audio: buffer, mimetype: mimeType, ptt: !!voice }; kind = "audio"; }
+  else { msgContent = { document: buffer, mimetype: mimeType, fileName, caption }; kind = "document"; }
 
   const sent = await session.sock.sendMessage(jid, msgContent);
   const ts = Date.now();
-  const body = caption || fileName || "📎 Attachment";
+  const media_url = saveOutgoingMedia(tenantId, buffer, mimeType, kind);
+  const body = caption || (voice ? "🎤 Voice message" : fileName) || "📎 Attachment";
   q.insertMessage.run({
     id: sent?.key?.id || `local-${ts}`,
     tenant_id: tenantId,
@@ -293,10 +350,11 @@ export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, capti
     ts,
     via: "human",
     mime_type: mimeType,
-    file_name: fileName,
+    file_name: voice ? "Voice note" : fileName,
+    media_url,
   });
   q.upsertChat.run({ tenant_id: tenantId, jid, name: null, last_msg: body, last_ts: ts, unread: 0 });
-  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body, ts, via: "human", mime_type: mimeType, file_name: fileName } });
+  broadcast(tenantId, { type: "message", data: { jid, from_me: true, body, ts, via: "human", mime_type: mimeType, file_name: voice ? "Voice note" : fileName, media_url } });
   return sent;
 }
 

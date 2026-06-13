@@ -151,6 +151,7 @@ const migrationStmts = [
   "ALTER TABLE chats ADD COLUMN agent_id INTEGER",
   "ALTER TABLE messages ADD COLUMN mime_type TEXT",
   "ALTER TABLE messages ADD COLUMN file_name TEXT",
+  "ALTER TABLE messages ADD COLUMN media_url TEXT",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -518,8 +519,8 @@ export const q = {
 
   // messages
   insertMessage: db.prepare(`
-    INSERT OR IGNORE INTO messages (id, tenant_id, jid, from_me, body, ts, via, mime_type, file_name)
-    VALUES (@id, @tenant_id, @jid, @from_me, @body, @ts, @via, @mime_type, @file_name)
+    INSERT OR IGNORE INTO messages (id, tenant_id, jid, from_me, body, ts, via, mime_type, file_name, media_url)
+    VALUES (@id, @tenant_id, @jid, @from_me, @body, @ts, @via, @mime_type, @file_name, @media_url)
   `),
   listMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts ASC LIMIT 500"),
   recentMessages: db.prepare("SELECT * FROM messages WHERE tenant_id = ? AND jid = ? ORDER BY ts DESC LIMIT ?"),

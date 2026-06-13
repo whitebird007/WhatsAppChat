@@ -591,31 +591,38 @@ function renderBubble(m) {
   const cls = m.from_me ? "out" : "in";
   const time = new Date(m.ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-  // Attachment bubble
-  if (m.mime_type) {
-    const icon = m.mime_type.startsWith("image/") ? "🖼️" : m.mime_type.startsWith("video/") ? "🎬" : m.mime_type.startsWith("audio/") ? "🎵" : "📎";
-    return `<div class="attachment-bubble${m.from_me ? " from-me" : ""}" style="align-self:${m.from_me ? "flex-end" : "flex-start"}">
-      <span class="attachment-icon">${icon}</span>
-      <div class="attachment-info">
-        <div class="attachment-name">${escHtml(m.file_name || "Attachment")}</div>
-        <div class="attachment-type">${m.mime_type}</div>
-      </div>
-    </div>`;
+  const metaInner = m.from_me
+    ? `${m.via === "ai" ? `<span class="via-pill via-ai">AI</span>` : m.via === "rule" ? `<span class="via-pill via-rule">Rule</span>` : ""}<span>${time}</span>`
+    : `<span>${time}</span>`;
+  const meta = `<div class="bubble-meta">${metaInner}</div>`;
+
+  // Media bubble — render the actual content
+  if (m.mime_type && m.media_url) {
+    const mt = m.mime_type;
+    const caption = m.body && !/^(📷|🎬|🎤|📎|🌟)/.test(m.body) ? `<div class="media-caption">${escHtml(m.body)}</div>` : "";
+    let inner;
+    if (mt.startsWith("image/")) {
+      inner = `<a href="${m.media_url}" target="_blank"><img class="media-img" src="${m.media_url}" alt="image"></a>${caption}`;
+    } else if (mt.startsWith("video/")) {
+      inner = `<video class="media-video" src="${m.media_url}" controls preload="metadata"></video>${caption}`;
+    } else if (mt.startsWith("audio/")) {
+      inner = `<div class="media-voice"><span class="media-voice-icon">🎤</span><audio src="${m.media_url}" controls preload="metadata"></audio></div>`;
+    } else {
+      inner = `<a class="media-doc" href="${m.media_url}" target="_blank" download><span class="media-doc-icon">📄</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || "Document")}</span><span class="media-doc-sub">Tap to download</span></span></a>`;
+    }
+    return `<div class="bubble media ${cls}">${inner}${meta}</div>`;
   }
 
-  let meta = "";
-  if (m.from_me) {
-    const viaPill = m.via === "ai" ? `<span class="via-pill via-ai">AI</span>` : m.via === "rule" ? `<span class="via-pill via-rule">Rule</span>` : "";
-    meta = `<div class="bubble-meta">${viaPill}<span>${time}</span></div>`;
-  } else {
-    meta = `<div class="bubble-meta">${time}</div>`;
+  // Media we couldn't download (rare) — show a small placeholder
+  if (m.mime_type) {
+    return `<div class="bubble media ${cls}"><div class="media-doc"><span class="media-doc-icon">📎</span><span class="media-doc-info"><span class="media-doc-name">${escHtml(m.file_name || m.body || "Attachment")}</span><span class="media-doc-sub">${escHtml(m.mime_type)}</span></span></div>${meta}</div>`;
   }
 
   return `<div class="bubble ${cls}">${escHtml(m.body)}${meta}</div>`;
 }
 
 function handleIncomingMessage(data) {
-  const { jid, from_me, body, ts, name, via, mime_type, file_name } = data;
+  const { jid, from_me, body, ts, name, via, mime_type, file_name, media_url } = data;
 
   // Update chat in list
   const existing = allChats.find((c) => c.jid === jid);
@@ -631,7 +638,7 @@ function handleIncomingMessage(data) {
 
   // Append to active conversation
   if (jid === activeJid) {
-    const msg = { from_me: !!from_me, body, ts, via, mime_type, file_name };
+    const msg = { from_me: !!from_me, body, ts, via, mime_type, file_name, media_url };
     const container = $("messages");
     const el = document.createElement("div");
     el.innerHTML = renderBubble(msg);
@@ -690,6 +697,47 @@ $("fileInput").addEventListener("change", async (e) => {
   }
   e.target.value = "";
 });
+
+/* ============================================================
+   COMPOSER — VOICE NOTE (record & send)
+   ============================================================ */
+let mediaRecorder = null, voiceChunks = [], voiceTimer = null;
+$("recordBtn").addEventListener("click", async () => {
+  if (mediaRecorder && mediaRecorder.state === "recording") { stopRecording(); return; }
+  if (!activeJid) return toast("Open a chat first", "error");
+  if (!navigator.mediaDevices?.getUserMedia) return toast("Recording isn't supported in this browser", "error");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    voiceChunks = [];
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size) voiceChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(voiceChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      const fd = new FormData();
+      fd.append("file", blob, "voice.ogg");
+      fd.append("jid", activeJid);
+      fd.append("voice", "1");
+      const r = await api("POST", "/api/send-media", fd, true);
+      toast(r?.ok ? "🎤 Voice message sent" : (r?.error || "Failed to send"), r?.ok ? "success" : "error");
+    };
+    mediaRecorder.start();
+    // recording UI
+    const btn = $("recordBtn");
+    btn.classList.add("recording");
+    let secs = 0;
+    voiceTimer = setInterval(() => { secs++; btn.title = `Recording ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")} — tap to send`; }, 1000);
+    toast("Recording… tap the mic again to send", "");
+  } catch (err) {
+    toast("Microphone access denied", "error");
+  }
+});
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+  clearInterval(voiceTimer);
+  $("recordBtn").classList.remove("recording");
+  $("recordBtn").title = "Record a voice message";
+}
 
 /* ============================================================
    COMPOSER — AI ASSIST

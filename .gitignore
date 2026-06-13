@@ -20,3 +20,6 @@ public/autologin.html
 
 # Editor / tooling
 .claude/
+
+# Received/sent media files (live on the server)
+public/media/

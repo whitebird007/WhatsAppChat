@@ -2774,3 +2774,27 @@ input::placeholder, textarea::placeholder { color: var(--ink-4); }
 .lead-src { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
 .lead-src-name { font-size: 13.5px; font-weight: 600; }
 .lead-src-meta { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
+
+/* ============================================================
+   MEDIA MESSAGES (photos, video, voice notes, documents)
+   ============================================================ */
+.bubble.media { padding: 5px; max-width: 300px; }
+.bubble.media .bubble-meta { padding: 2px 6px 0; }
+.media-img { display: block; max-width: 280px; max-height: 320px; width: 100%; border-radius: 11px; cursor: pointer; object-fit: cover; }
+.media-video { display: block; max-width: 280px; border-radius: 11px; background: #000; }
+.media-caption { padding: 6px 8px 2px; font-size: 13.5px; line-height: 1.4; }
+.media-voice { display: flex; align-items: center; gap: 9px; padding: 4px 6px; min-width: 230px; }
+.media-voice-icon { font-size: 18px; flex-shrink: 0; }
+.media-voice audio { height: 38px; flex: 1; }
+.bubble.media.in .media-voice audio { filter: none; }
+.media-doc { display: flex; align-items: center; gap: 11px; padding: 9px 12px; text-decoration: none; min-width: 200px; }
+.media-doc-icon { font-size: 24px; flex-shrink: 0; }
+.media-doc-info { display: flex; flex-direction: column; min-width: 0; }
+.media-doc-name { font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.media-doc-sub { font-size: 11px; opacity: 0.7; margin-top: 1px; }
+.bubble.media.out .media-doc { color: #fff; }
+
+/* Recording state on the mic button */
+.comp-icon.recording { color: #fff; background: var(--danger); animation: recPulse 1.2s ease-in-out infinite; }
+@keyframes recPulse { 0%, 100% { box-shadow: 0 0 0 0 oklch(0.5 0.19 27 / 0.5); } 50% { box-shadow: 0 0 0 7px oklch(0.5 0.19 27 / 0); } }
+@media (prefers-reduced-motion: reduce) { .comp-icon.recording { animation: none; } }
