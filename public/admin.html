@@ -57,7 +57,7 @@
 </style>
 </head>
 <body>
-<div id="admin">
+<div id="admin" style="display:none">
   <aside class="ad-side">
     <div class="ad-brand">InboxAI <span class="ad-badge">Admin</span></div>
     <nav class="ad-nav" id="adNav">
@@ -76,6 +76,22 @@
   <main class="ad-main" id="adMain"><div class="ad-loading">Loading…</div></main>
 </div>
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- Admin passcode gate -->
+<div id="adLock" style="position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:oklch(0.13 0.02 265)">
+  <div style="width:360px;max-width:90vw;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px">
+    <div style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;margin-bottom:4px">🔒 Admin access</div>
+    <p id="adLockMsg" class="ad-sub" style="margin-bottom:18px">Enter your admin passcode to continue.</p>
+    <input id="adLockInput" type="password" placeholder="Admin passcode" autocomplete="off"
+      style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;margin-bottom:10px" />
+    <input id="adLockConfirm" type="password" placeholder="Confirm passcode" autocomplete="off"
+      style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;margin-bottom:10px;display:none" />
+    <div id="adLockError" style="color:var(--danger);font-size:12.5px;margin-bottom:10px;display:none"></div>
+    <button id="adLockBtn" style="width:100%;padding:11px;border:none;border-radius:9px;background:oklch(0.55 0.18 280);color:#fff;font:inherit;font-weight:700;cursor:pointer">Unlock</button>
+    <button id="adLockLogout" style="width:100%;margin-top:8px;padding:9px;border:none;border-radius:9px;background:none;color:var(--ink-3);font:inherit;font-size:12.5px;cursor:pointer">Log out</button>
+  </div>
+</div>
+
 <script src="admin.js"></script>
 </body>
 </html>

@@ -2,15 +2,18 @@
 "use strict";
 const TOKEN = localStorage.getItem("token");
 if (!TOKEN) location.href = "/login.html";
+let ADMIN_TOKEN = sessionStorage.getItem("admin_token") || "";
 const $ = (id) => document.getElementById(id);
 
 async function api(method, path, body) {
-  const res = await fetch(path, {
-    method,
-    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (res.status === 401) { localStorage.removeItem("token"); location.href = "/login.html"; return; }
+  const headers = { "content-type": "application/json", authorization: `Bearer ${TOKEN}` };
+  if (ADMIN_TOKEN) headers["x-admin-token"] = ADMIN_TOKEN;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 401) {
+    let j = {}; try { j = await res.json(); } catch {}
+    if (j.code === "ADMIN_LOCKED") { ADMIN_TOKEN = ""; sessionStorage.removeItem("admin_token"); showLock(); return; }
+    localStorage.removeItem("token"); location.href = "/login.html"; return;
+  }
   if (res.status === 403) { location.href = "/"; return; }
   return res.json();
 }
@@ -226,6 +229,14 @@ async function renderSettings(main) {
       <label class="ad-toggle" style="margin:6px 0 16px"><input type="checkbox" id="setSignups" ${s.signups_enabled ? "checked" : ""}/> Allow new agency sign-ups</label>
 
       <button class="ad-btn primary" id="setSave">Save settings</button>
+    </div>
+
+    <div class="ad-card" style="max-width:560px">
+      <div class="ad-card-title">🔒 Admin passcode</div>
+      <p style="font-size:12.5px;color:var(--ink-3);margin-bottom:14px">Required to open this console, separate from your login. Choose 6+ characters.</p>
+      <div class="ad-field"><label>Current passcode</label><input id="pcCurrent" type="password" placeholder="Current passcode" autocomplete="off" /></div>
+      <div class="ad-field"><label>New passcode</label><input id="pcNew" type="password" placeholder="New passcode (6+ chars)" autocomplete="off" /></div>
+      <button class="ad-btn primary" id="pcSave">Change passcode</button>
     </div>`;
   $("setSave").addEventListener("click", async () => {
     const body = {
@@ -238,13 +249,93 @@ async function renderSettings(main) {
     toast(r?.ok ? "Settings saved" : (r?.error || "Failed"), r?.ok ? "success" : "error");
     if (r?.ok) renderSettings(main);
   });
+  $("pcSave").addEventListener("click", async () => {
+    const r = await POST("/api/admin/passcode", {
+      currentPasscode: $("pcCurrent").value,
+      newPasscode: $("pcNew").value,
+    });
+    toast(r?.ok ? "Passcode changed" : (r?.error || "Failed"), r?.ok ? "success" : "error");
+    if (r?.ok) { $("pcCurrent").value = ""; $("pcNew").value = ""; }
+  });
+}
+
+/* ---------- Admin passcode gate ---------- */
+let lockCreateMode = false;
+function showLock() {
+  $("admin").style.display = "none";
+  $("adLock").style.display = "flex";
+  $("adLockError").style.display = "none";
+  $("adLockInput").value = "";
+  $("adLockConfirm").value = "";
+  $("adLockInput").focus();
+}
+function hideLock() {
+  $("adLock").style.display = "none";
+  $("admin").style.display = "flex";
+}
+function lockError(msg) {
+  const e = $("adLockError");
+  e.textContent = msg; e.style.display = "block";
+}
+async function doUnlock() {
+  const passcode = $("adLockInput").value;
+  if (!passcode) return lockError("Enter your passcode.");
+  let body;
+  if (lockCreateMode) {
+    if (passcode.length < 6) return lockError("Passcode must be at least 6 characters.");
+    if (passcode !== $("adLockConfirm").value) return lockError("Passcodes don't match.");
+    body = { newPasscode: passcode };
+  } else {
+    body = { passcode };
+  }
+  // raw fetch (api() would loop on ADMIN_LOCKED)
+  const res = await fetch("/api/admin/unlock", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 403) { location.href = "/"; return; }
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.token) return lockError(j.error || "Could not unlock.");
+  ADMIN_TOKEN = j.token;
+  sessionStorage.setItem("admin_token", j.token);
+  hideLock();
+  startConsole();
+}
+$("adLockBtn").addEventListener("click", doUnlock);
+$("adLockInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doUnlock(); });
+$("adLockConfirm").addEventListener("keydown", (e) => { if (e.key === "Enter") doUnlock(); });
+$("adLockLogout").addEventListener("click", () => { localStorage.removeItem("token"); sessionStorage.removeItem("admin_token"); location.href = "/login.html"; });
+
+async function startConsole() {
+  const me = await GET("/api/admin/me");
+  if (!me?.admin) return; // showLock already handled by api() on ADMIN_LOCKED
+  $("adWho").textContent = me.email;
+  const sec = (location.hash || "#overview").slice(1);
+  goSection(["overview", "agencies", "users", "plans", "settings"].includes(sec) ? sec : "overview");
 }
 
 /* boot */
 (async function init() {
-  const me = await GET("/api/admin/me");
-  if (!me?.admin) { location.href = "/"; return; }
-  $("adWho").textContent = me.email;
-  const sec = (location.hash || "#overview").slice(1);
-  goSection(["overview", "agencies", "users", "plans", "settings"].includes(sec) ? sec : "overview");
+  // Confirm super-admin + learn whether a passcode exists yet
+  const res = await fetch("/api/admin/lock-status", {
+    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+  });
+  if (res.status === 401) { localStorage.removeItem("token"); location.href = "/login.html"; return; }
+  if (res.status === 403) { location.href = "/"; return; }
+  const { passcodeSet } = await res.json().catch(() => ({ passcodeSet: true }));
+  lockCreateMode = !passcodeSet;
+  $("adLockMsg").textContent = lockCreateMode
+    ? "Set an admin passcode to protect this console. You'll enter it each session."
+    : "Enter your admin passcode to continue.";
+  $("adLockConfirm").style.display = lockCreateMode ? "block" : "none";
+  $("adLockBtn").textContent = lockCreateMode ? "Set passcode & enter" : "Unlock";
+
+  if (ADMIN_TOKEN && !lockCreateMode) {
+    // try the cached session token; if stale, api() will surface the lock
+    hideLock();
+    startConsole();
+  } else {
+    showLock();
+  }
 })();

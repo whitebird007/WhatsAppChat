@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import { q, getSetting, convQuota, tenantActive, PLANS, getPlans, newId, LIFECYCLE_LABELS, ensureStages } from "./db.js";
 import { validateFlow } from "./flows.js";
-import { signup, login, authMiddleware, verifyToken, createOrganization, switchOrg, hashPassword } from "./auth.js";
+import { signup, login, authMiddleware, verifyToken, createOrganization, switchOrg, hashPassword, verifyPassword, signToken } from "./auth.js";
 import {
   startSession, stopSession, getSessionStatus,
   sendText, sendMedia, sendToPhone, onEvent, resumeAllSessions,
@@ -225,9 +225,55 @@ app.delete("/api/branding/logo", (req, res) => {
 /* ============================================================
    SUPER-ADMIN PANEL (application owner)
    ============================================================ */
+// Seed the admin passcode from env on first boot (optional convenience).
+if (process.env.ADMIN_PASSCODE && !q.getApp.get("admin_passcode_hash")?.value) {
+  q.setApp.run("admin_passcode_hash", hashPassword(process.env.ADMIN_PASSCODE));
+}
+
+// Two-factor gate for the admin console:
+//   1) the user must be a super-admin (is_admin), AND
+//   2) they must have unlocked this session with the admin passcode.
+// The unlock / status endpoints need only (1) so the admin can authenticate.
 app.use("/api/admin", (req, res, next) => {
   if (!req.user?.is_admin) return res.status(403).json({ error: "Admin access only" });
+  if (req.path === "/unlock" || req.path === "/lock-status") return next();
+  const tok = req.headers["x-admin-token"];
+  const p = tok && verifyToken(tok);
+  if (!p || !p.admin_unlock || p.uid !== req.user.id) {
+    return res.status(401).json({ error: "Admin locked", code: "ADMIN_LOCKED" });
+  }
   next();
+});
+
+// Whether an admin passcode has been set yet (first-time setup vs login)
+app.get("/api/admin/lock-status", (req, res) => {
+  res.json({ passcodeSet: !!q.getApp.get("admin_passcode_hash")?.value });
+});
+
+// Unlock the admin console. First time (no passcode set) creates one.
+app.post("/api/admin/unlock", (req, res) => {
+  const { passcode, newPasscode } = req.body || {};
+  const stored = q.getApp.get("admin_passcode_hash")?.value;
+  const issue = () => res.json({ token: signToken({ uid: req.user.id, admin_unlock: true }, 60 * 60 * 8) });
+  if (!stored) {
+    if (!newPasscode || newPasscode.length < 6) return res.status(400).json({ error: "Choose an admin passcode of at least 6 characters." });
+    q.setApp.run("admin_passcode_hash", hashPassword(newPasscode));
+    return issue();
+  }
+  if (!passcode || !verifyPassword(passcode, stored)) return res.status(401).json({ error: "Incorrect admin passcode." });
+  issue();
+});
+
+// Change the admin passcode (already unlocked)
+app.post("/api/admin/passcode", (req, res) => {
+  const { currentPasscode, newPasscode } = req.body || {};
+  const stored = q.getApp.get("admin_passcode_hash")?.value;
+  if (stored && (!currentPasscode || !verifyPassword(currentPasscode, stored))) {
+    return res.status(401).json({ error: "Current passcode is incorrect." });
+  }
+  if (!newPasscode || newPasscode.length < 6) return res.status(400).json({ error: "New passcode must be at least 6 characters." });
+  q.setApp.run("admin_passcode_hash", hashPassword(newPasscode));
+  res.json({ ok: true });
 });
 
 app.get("/api/admin/me", (req, res) => res.json({ admin: true, email: req.user.email, name: req.user.name }));
@@ -1470,7 +1516,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.7 (per-agent-style, default-ai-agent, closable-summary)";
+const APP_VERSION = "v0.3.8 (followup-overrides-ai, admin-passcode-gate)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);

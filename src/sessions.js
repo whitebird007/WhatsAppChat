@@ -335,7 +335,10 @@ async function handleMessage(tenantId, sock, msg) {
 
   if (fromMe) return;
 
-  // A customer reply cancels any active follow-up drip so we never nag a live conversation
+  // Follow-up sequences take precedence over the AI: if this chat is in an
+  // active drip, the AI stays silent for this turn (the follow-up "owns" the
+  // conversation). The customer's reply still cancels the drip so we never nag.
+  const inFollowUp = !!q.chatHasActiveEnrollment.get(tenantId, jid);
   try {
     const { onCustomerReply } = await import("./automation.js");
     onCustomerReply(tenantId, jid);
@@ -392,10 +395,11 @@ async function handleMessage(tenantId, sock, msg) {
     return;
   }
 
-  // 3) AI agent
+  // 3) AI agent — only if no flow, no rule, and no active follow-up claimed it.
+  //    Order of precedence: flows → auto-reply rules → follow-ups → AI.
   const globalAi = getSetting(tenantId, "ai_global_enabled") === "1";
   const chat = q.getChat.get(tenantId, jid);
-  if (globalAi && chat?.ai_enabled) {
+  if (globalAi && chat?.ai_enabled && !inFollowUp) {
     let reply = null;
     try {
       reply = await generateReply(tenantId, jid);

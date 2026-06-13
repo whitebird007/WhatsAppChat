@@ -633,6 +633,7 @@ export const q = {
   dueEnrollments: db.prepare("SELECT * FROM sequence_enrollments WHERE status = 'active' AND next_run_ts <= ? ORDER BY next_run_ts LIMIT 50"),
   advanceEnrollment: db.prepare("UPDATE sequence_enrollments SET current_step = ?, next_run_ts = ?, status = ? WHERE id = ?"),
   stopEnrollmentsForChat: db.prepare("UPDATE sequence_enrollments SET status = 'stopped' WHERE tenant_id = ? AND jid = ? AND status = 'active'"),
+  chatHasActiveEnrollment: db.prepare("SELECT id FROM sequence_enrollments WHERE tenant_id = ? AND jid = ? AND status = 'active' LIMIT 1"),
   countActiveEnrollments: db.prepare("SELECT COUNT(*) AS n FROM sequence_enrollments WHERE tenant_id = ? AND sequence_id = ? AND status = 'active'"),
 
   // ── Broadcasts ──
