@@ -104,7 +104,7 @@ if (reduce) {
 
 /* ---------- Count-up stats ---------- */
 (function counters() {
-  const nums = $$(".num[data-count]");
+  const nums = $$("[data-count]");
   if (!nums.length) return;
   const animate = (el) => {
     const target = +el.dataset.count;
