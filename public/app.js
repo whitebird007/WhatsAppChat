@@ -1028,11 +1028,68 @@ function openAgentModal(agent) {
   $("agentRules").value = agent?.rules || "";
   $("agentApiKey").value = ""; // never pre-fill API keys
   $("agentModel").value = agent?.model || "gpt-4o-mini";
+  resetAgentTester();
+  $("agentTester").classList.add("hidden");
   $("agentModal").classList.remove("hidden");
 }
 
 $("agentModalClose").addEventListener("click", () => $("agentModal").classList.add("hidden"));
 $("agentModalCancel").addEventListener("click", () => $("agentModal").classList.add("hidden"));
+
+/* ============================================================
+   AGENT PHONE TESTER (live test, even unsaved)
+   ============================================================ */
+let testMsgs = [];
+function resetAgentTester() {
+  testMsgs = [];
+  if ($("testMessages")) $("testMessages").innerHTML = `<div class="phone-bubble them">👋 Send a message to test your agent.</div>`;
+}
+function renderAgentTester(typing) {
+  const box = $("testMessages");
+  box.innerHTML = testMsgs.map((m) =>
+    `<div class="phone-bubble ${m.role === "assistant" ? "them" : "me"}">${escHtml(m.content)}</div>`
+  ).join("") || `<div class="phone-bubble them">👋 Send a message to test your agent.</div>`;
+  if (typing) box.innerHTML += `<div class="phone-bubble them typing">typing…</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+$("agentTestToggle").addEventListener("click", () => {
+  const t = $("agentTester");
+  t.classList.toggle("hidden");
+  if (!t.classList.contains("hidden")) {
+    $("testAvatar").textContent = $("agentEmoji").value.trim() || "🤖";
+    $("testName").textContent = $("agentName").value.trim() || "Your Agent";
+    if (!testMsgs.length) resetAgentTester();
+  }
+});
+$("testReset").addEventListener("click", resetAgentTester);
+async function sendAgentTest() {
+  const input = $("testInput");
+  const text = input.value.trim();
+  if (!text) return;
+  $("testAvatar").textContent = $("agentEmoji").value.trim() || "🤖";
+  $("testName").textContent = $("agentName").value.trim() || "Your Agent";
+  testMsgs.push({ role: "user", content: text });
+  input.value = "";
+  renderAgentTester(true);
+  $("testSend").disabled = true;
+  const r = await POST("/api/agents/test", {
+    instructions: $("agentInstructions").value,
+    playbook: $("agentPlaybook").value,
+    rules: $("agentRules").value,
+    model: $("agentModel").value,
+    openai_api_key: $("agentApiKey").value.trim(),
+    messages: testMsgs,
+  });
+  $("testSend").disabled = false;
+  if (r?.reply) {
+    testMsgs.push({ role: "assistant", content: r.reply });
+  } else {
+    testMsgs.push({ role: "assistant", content: "⚠ " + (r?.error || "AI couldn't reply — check your API key.") });
+  }
+  renderAgentTester(false);
+}
+$("testSend").addEventListener("click", sendAgentTest);
+$("testInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendAgentTest(); } });
 
 // AI-assist buttons on the agent's instructions / playbook / rules fields:
 // expand the user's few words (or write from scratch) into a polished section.
@@ -1186,6 +1243,29 @@ $("learnStyleBtn").addEventListener("click", async () => {
   }
   box.innerHTML = `<div class="chat-summary-body"><strong>Your learned style</strong><br>${escHtml(r.style || "").replace(/\n/g, "<br>")}</div>`;
   toast("Writing style learned — AI now replies in your voice", "success");
+});
+
+$("ownerImportBtn").addEventListener("click", async () => {
+  const files = $("ownerImportFiles").files;
+  if (!files.length) return toast("Pick at least one .txt export", "error");
+  const box = $("ownerStyleBox");
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="suggest-loading">⚡ Reading ${files.length} chat file${files.length === 1 ? "" : "s"} & learning your voice…</div>`;
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+  if ($("ownerImportName").value.trim()) fd.append("ownerName", $("ownerImportName").value.trim());
+  let r;
+  try {
+    const resp = await fetch("/api/owner-style/import", { method: "POST", body: fd });
+    r = await resp.json();
+  } catch { r = { error: "Upload failed — try again" }; }
+  if (r?.error) {
+    box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="chat-summary-body" style="color:var(--brand-600)">✓ Learned from ${r.imported || 0} messages across your files.</div><div class="chat-summary-body" style="margin-top:8px"><strong>Your learned style</strong><br>${escHtml(r.style || "").replace(/\n/g, "<br>")}</div>`;
+  toast("Voice learned instantly — AI now replies like you", "success");
+  loadOwnerStyle();
 });
 
 $("settingsSave").addEventListener("click", async () => {

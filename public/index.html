@@ -579,6 +579,22 @@
       <p class="panel-sub">Teach the AI to reply in <strong>your</strong> voice. It studies the messages you've sent across all chats — your tone, formality, emoji and punctuation habits — so AI replies sound like you. Available once you've sent 100+ messages.</p>
       <div id="ownerStyleStatus" class="info-note" style="display:none"></div>
       <button class="primary-btn" id="learnStyleBtn">Learn my writing style</button>
+
+      <div class="style-import" style="margin-top:18px;padding:16px;border:1px dashed var(--line-2);border-radius:12px">
+        <div style="font-weight:600;margin-bottom:4px">⚡ Learn instantly from chat files</div>
+        <p class="panel-sub" style="margin:0 0 10px">Don't want to wait for 100 messages? Export a few of your real WhatsApp chats (chat → <strong>Export chat</strong> → Without media → unzip), then upload the <code>.txt</code> files here. The AI reads how you write and builds your global voice right away. You can upload several at once.</p>
+        <div class="modal-field" style="max-width:420px">
+          <label>Your name as it appears in the exports (optional)</label>
+          <input id="ownerImportName" placeholder="e.g. how WhatsApp shows your own name" />
+          <small style="color:var(--ink-3)">Helps isolate your messages from the customers'.</small>
+        </div>
+        <div class="modal-field" style="max-width:420px">
+          <label>Chat export files (.txt) — multiple allowed</label>
+          <input type="file" id="ownerImportFiles" accept=".txt,text/plain" multiple />
+        </div>
+        <button class="ghost-btn" id="ownerImportBtn">Learn my voice from these files</button>
+      </div>
+
       <div id="ownerStyleBox" class="chat-summary hidden" style="margin-top:14px"></div>
     </div>
   </section>
@@ -912,6 +928,31 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
           <option value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</option>
         </select>
         <div class="field-hint">gpt-4o-mini is recommended for most use cases — great quality at low cost.</div>
+      </div>
+    </div>
+
+    <div class="agent-test">
+      <button type="button" class="ghost-btn" id="agentTestToggle">🧪 Test this agent</button>
+      <div class="phone-tester hidden" id="agentTester">
+        <p class="panel-sub" style="margin:10px 0">Chat with your agent below using the instructions above — no need to save first. Changes to the fields apply on your next message.</p>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-header">
+              <div class="phone-avatar" id="testAvatar">🤖</div>
+              <div class="phone-headinfo">
+                <div class="phone-name" id="testName">Your Agent</div>
+                <div class="phone-status"><span class="phone-dot"></span>AI Active</div>
+              </div>
+            </div>
+            <div class="phone-body" id="testMessages"></div>
+            <div class="phone-input">
+              <input id="testInput" placeholder="Hi! What do you sell?" />
+              <button id="testSend" aria-label="Send">➤</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="ghost-btn" id="testReset" style="margin-top:10px">Reset conversation</button>
       </div>
     </div>
 

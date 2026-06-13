@@ -139,6 +139,52 @@ export async function learnOwnerStyle(tenantId) {
   return out;
 }
 
+/**
+ * Learn the GLOBAL owner voice instantly from one or more exported WhatsApp
+ * chats, instead of waiting for 100 live sent messages. If ownerName is given
+ * we isolate the owner's own messages across all files; otherwise we feed the
+ * full transcripts and let the model infer the owner's voice.
+ */
+export async function learnOwnerStyleFromExports(tenantId, rawTexts = [], ownerName = "") {
+  const all = [];
+  for (const t of rawTexts) all.push(...cleanWhatsAppExport(t));
+  let lines = all;
+  if (ownerName) {
+    const pref = ownerName.trim().toLowerCase() + ":";
+    const mine = all.filter((l) => l.toLowerCase().startsWith(pref)).map((l) => l.slice(l.indexOf(":") + 1).trim());
+    if (mine.length >= 5) lines = mine;
+  }
+  if (lines.length < 5) { const e = new Error("Couldn't read enough messages — upload the .txt files from WhatsApp's \"Export chat\" (unzip first)."); throw e; }
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, null);
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
+  let sample = lines.join("\n");
+  if (sample.length > 24000) sample = sample.slice(-24000);
+  const hint = ownerName ? `These are the business owner's ("${ownerName}") own messages.` : `These are full WhatsApp transcripts — focus on how the business owner (not the customers) writes.`;
+  const system = "You analyze how a business owner writes on WhatsApp so an AI assistant can reply in their exact voice. Produce a concise STYLE GUIDE (max ~150 words) covering: tone (warm/formal/casual), formality, typical greeting & sign-off, emoji usage, punctuation habits, sentence length, capitalization, languages/Roman-Urdu, and any catchphrases. Write it as direct instructions to the assistant, e.g. 'Keep replies short and warm. Use one emoji max...'. Output ONLY the guide.";
+  const turns = [{ role: "user", content: `${hint}\n\n${sample}` }];
+  const out = provider === "openai" ? await callOpenAI(system, turns, apiKey, model) : await callAnthropic(system, turns);
+  return { style: out, imported: lines.length };
+}
+
+/**
+ * Run the agent (possibly unsaved, from the create/edit form) against a test
+ * conversation and return its next reply — powers the in-modal phone tester.
+ */
+export async function testAgentReply(tenantId, draft = {}, messages = []) {
+  const useAgent = draft.openai_api_key ? { openai_api_key: draft.openai_api_key, model: draft.model } : null;
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, useAgent);
+  if (!apiKey) { const e = new Error("No AI API key configured — add one to this agent or in AI Settings."); e.aiProviderError = true; throw e; }
+  let system = (draft.instructions || "").trim() || "You are a helpful WhatsApp business assistant.";
+  if ((draft.playbook || "").trim()) system += `\n\n## Conversation Playbook:\n${draft.playbook}`;
+  if ((draft.rules || "").trim()) system += `\n\n## Rules:\n${draft.rules}`;
+  system += "\n\nThis is a TEST conversation with the owner. Reply exactly as you would to a real customer on WhatsApp — concise and natural.";
+  let turns = (messages || []).slice(-20).map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") }));
+  while (turns.length && turns[0].role !== "user") turns.shift();
+  if (!turns.length) turns = [{ role: "user", content: "Hi!" }];
+  const out = provider === "openai" ? await callOpenAI(system, turns, apiKey, model) : await callAnthropic(system, turns);
+  return out;
+}
+
 /** Learn a single conversation: a running summary + how that customer communicates. */
 export async function learnChatBehaviour(tenantId, jid) {
   const recent = q.recentMessages.all(tenantId, jid, 200).reverse().filter((m) => !m.mime_type);

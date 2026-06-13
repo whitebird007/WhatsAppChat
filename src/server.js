@@ -15,7 +15,7 @@ import {
   isConnected, connectedCount,
 } from "./sessions.js";
 import { createCheckout, createPortal, webhookHandler, billingEnabled } from "./billing.js";
-import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour, learnChatBehaviourFromExport, draftAgentField } from "./ai.js";
+import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour, learnChatBehaviourFromExport, draftAgentField, learnOwnerStyleFromExports, testAgentReply } from "./ai.js";
 import { packSummary, installPack } from "./packs.js";
 import QRCode from "qrcode";
 import {
@@ -637,6 +637,16 @@ app.post("/api/settings", (req, res) => {
 /* --- AI Agents --- */
 app.get("/api/agents", (req, res) => res.json(q.listAgents.all(req.tenant.id)));
 
+// Live-test an agent (even unsaved) from the create/edit form
+app.post("/api/agents/test", async (req, res) => {
+  const { instructions, playbook, rules, model, openai_api_key, messages } = req.body || {};
+  try {
+    const reply = await testAgentReply(req.tenant.id, { instructions, playbook, rules, model, openai_api_key }, messages || []);
+    if (!reply) return res.status(503).json({ error: "AI unavailable — check your API key" });
+    res.json({ reply });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
 app.post("/api/agents", (req, res) => {
   const { name, emoji, instructions, playbook, rules, model, openai_api_key } = req.body || {};
   if (!name) return res.status(400).json({ error: "name required" });
@@ -1106,6 +1116,17 @@ app.post("/api/owner-style/learn", async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 app.delete("/api/owner-style", (req, res) => { q.setSetting.run(req.tenant.id, "owner_style", ""); res.json({ ok: true }); });
+// Instant global style: learn the owner's voice from uploaded WhatsApp exports
+app.post("/api/owner-style/import", upload.array("files", 20), async (req, res) => {
+  const texts = (req.files || []).map((f) => f.buffer.toString("utf8")).filter((t) => t.trim());
+  if (!texts.length) return res.status(400).json({ error: "Upload at least one chat .txt file." });
+  try {
+    const { style, imported } = await learnOwnerStyleFromExports(req.tenant.id, texts, req.body?.ownerName || "");
+    if (!style) return res.status(503).json({ error: "AI returned nothing — check your API key" });
+    q.setSetting.run(req.tenant.id, "owner_style", style);
+    res.json({ ok: true, style, imported });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
 
 // Per-chat behaviour
 app.get("/api/chats/:jid/insight", (req, res) => {
@@ -1435,7 +1456,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.5 (ai-write-agent-fields)";
+const APP_VERSION = "v0.3.6 (instant-global-learn-import, agent-phone-tester)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);
