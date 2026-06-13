@@ -7,7 +7,10 @@ import makeWASocket, {
 import QRCode from "qrcode";
 import pino from "pino";
 import fs from "fs";
+import os from "os";
 import path from "path";
+import { execFile } from "child_process";
+import ffmpegPath from "ffmpeg-static";
 import { fileURLToPath } from "url";
 import { q, getSetting, automationAllowed, convQuota, tenantActive } from "./db.js";
 import { runFlows } from "./flows.js";
@@ -30,6 +33,29 @@ function extFromMime(mime, kind) {
   if (map[sub]) return map[sub];
   if (sub) return sub.replace(/[^a-z0-9]/gi, "") || "bin";
   return kind === "audio" ? "ogg" : kind === "image" ? "jpg" : kind === "video" ? "mp4" : "bin";
+}
+
+/* Convert any recorded/uploaded audio (e.g. browser WebM/Opus) into the
+   OGG/Opus mono format WhatsApp requires for voice notes. Returns a Buffer. */
+function transcodeToOpusOgg(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    if (!ffmpegPath) return reject(new Error("ffmpeg not available"));
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const inPath = path.join(os.tmpdir(), `wa-in-${id}`);
+    const outPath = path.join(os.tmpdir(), `wa-out-${id}.ogg`);
+    const cleanup = () => { try { fs.unlinkSync(inPath); } catch {} try { fs.unlinkSync(outPath); } catch {} };
+    try { fs.writeFileSync(inPath, inputBuffer); } catch (e) { return reject(e); }
+    execFile(
+      ffmpegPath,
+      ["-y", "-hide_banner", "-loglevel", "error", "-i", inPath, "-ac", "1", "-c:a", "libopus", "-b:a", "32k", "-application", "voip", outPath],
+      { timeout: 30000 },
+      (err) => {
+        if (err) { cleanup(); return reject(err); }
+        try { const out = fs.readFileSync(outPath); cleanup(); resolve(out); }
+        catch (e) { cleanup(); reject(e); }
+      }
+    );
+  });
 }
 
 /* Download an incoming media message, save it under /public/media, return its info (or null). */
@@ -334,7 +360,15 @@ export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, capti
   let msgContent, kind;
   if (mimeType.startsWith("image/")) { msgContent = { image: buffer, caption, mimetype: mimeType }; kind = "image"; }
   else if (mimeType.startsWith("video/")) { msgContent = { video: buffer, caption, mimetype: mimeType }; kind = "video"; }
-  else if (mimeType.startsWith("audio/")) { msgContent = { audio: buffer, mimetype: mimeType, ptt: !!voice }; kind = "audio"; }
+  else if (mimeType.startsWith("audio/")) {
+    kind = "audio";
+    if (voice) {
+      // WhatsApp voice notes must be real OGG/Opus — transcode the browser recording.
+      buffer = await transcodeToOpusOgg(buffer);
+      mimeType = "audio/ogg; codecs=opus";
+    }
+    msgContent = { audio: buffer, mimetype: mimeType, ptt: !!voice };
+  }
   else { msgContent = { document: buffer, mimetype: mimeType, fileName, caption }; kind = "document"; }
 
   const sent = await session.sock.sendMessage(jid, msgContent);
