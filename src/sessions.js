@@ -120,6 +120,23 @@ async function saveIncomingMedia(tenantId, msg, sock) {
 /** tenantId -> { sock, status, qrDataUrl, me, stopping } */
 const sessions = new Map();
 
+// Baileys can deliver the same message id in more than one "messages.upsert"
+// event, which would otherwise run flows/rules/AI (and send the reply) twice.
+// Track recently-seen ids and skip duplicates. In-memory by design — cleared on
+// restart, which is fine because old messages aren't re-notified after a reconnect.
+const seenMessageIds = new Set();
+function alreadyHandled(tenantId, id) {
+  if (!id) return false;
+  const key = `${tenantId}:${id}`;
+  if (seenMessageIds.has(key)) return true;
+  seenMessageIds.add(key);
+  if (seenMessageIds.size > 6000) {
+    let i = 0;
+    for (const k of seenMessageIds) { seenMessageIds.delete(k); if (++i >= 1500) break; }
+  }
+  return false;
+}
+
 let broadcast = (tenantId, event) => {};
 export function onEvent(fn) {
   broadcast = fn;
@@ -342,6 +359,8 @@ function canonicalJid(tenantId, jid) {
 }
 
 async function handleMessage(tenantId, sock, msg) {
+  // Skip duplicate deliveries of the same message (prevents double auto-replies).
+  if (alreadyHandled(tenantId, msg.key?.id)) return;
   let jid = msg.key.remoteJid;
   if (!jid || jid === "status@broadcast" || jid.endsWith("@g.us")) return;
 
