@@ -414,7 +414,15 @@ export async function sendText(tenantId, jid, text, via = "human") {
     throw new Error("WhatsApp is not connected");
   }
   jid = canonicalJid(tenantId, jid);
-  const sent = await session.sock.sendMessage(jid, { text });
+  let sent;
+  try {
+    sent = await session.sock.sendMessage(jid, { text });
+    console.log(`[wa:${tenantId}] SENT text → ${jid} (id ${sent?.key?.id})`);
+  } catch (err) {
+    console.error(`[wa:${tenantId}] SEND FAILED → ${jid}: ${err.message}`);
+    broadcast(tenantId, { type: "delivery_problem", data: { jid, id: null, code: null, reason: err.message } });
+    throw err;
+  }
   const ts = Date.now();
   const id = sent?.key?.id || `local-${ts}`;
   q.insertMessage.run({
@@ -468,7 +476,15 @@ export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, capti
   }
   else { msgContent = { document: buffer, mimetype: mimeType, fileName, caption }; kind = "document"; }
 
-  const sent = await session.sock.sendMessage(jid, msgContent);
+  let sent;
+  try {
+    sent = await session.sock.sendMessage(jid, msgContent);
+    console.log(`[wa:${tenantId}] SENT ${kind} → ${jid} (id ${sent?.key?.id})`);
+  } catch (err) {
+    console.error(`[wa:${tenantId}] SEND ${kind} FAILED → ${jid}: ${err.message}`);
+    broadcast(tenantId, { type: "delivery_problem", data: { jid, id: null, code: null, reason: err.message } });
+    throw err;
+  }
   const ts = Date.now();
   const id = sent?.key?.id || `local-${ts}`;
   const media_url = saveOutgoingMedia(tenantId, buffer, mimeType, kind);
@@ -504,13 +520,25 @@ export async function sendToPhone(tenantId, phone, text, via = "api") {
 
 export async function stopSession(tenantId, { logout = false } = {}) {
   const session = sessions.get(tenantId);
-  if (!session) return;
-  session.stopping = true;
-  try {
-    if (logout) await session.sock.logout();
-    else session.sock.end?.();
-  } catch {}
-  sessions.delete(tenantId);
+  if (session) {
+    session.stopping = true;
+    try {
+      if (logout) await session.sock.logout();
+      else session.sock.end?.();
+    } catch {}
+    sessions.delete(tenantId);
+  }
+  // On a full logout, ALWAYS wipe the auth folder so the next pairing starts from a
+  // clean encryption session. (A broken/corrupted session can't log out cleanly, so
+  // we can't rely on the loggedOut event to remove it.) This fixes PreKeyError /
+  // "Invalid PreKey ID" / 463 tctoken issues caused by stale Signal state.
+  if (logout) {
+    try {
+      const authDir = path.join(AUTH_ROOT, tenantId);
+      fs.rmSync(authDir, { recursive: true, force: true });
+      console.log(`[wa:${tenantId}] auth state wiped — fresh QR required`);
+    } catch (err) { console.error(`[wa:${tenantId}] auth wipe failed:`, err.message); }
+  }
   broadcast(tenantId, { type: "status", data: getSessionStatus(tenantId) });
 }
 

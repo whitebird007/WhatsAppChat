@@ -1365,8 +1365,16 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
+const APP_VERSION = "v0.3.0 (sends:in-thread, baileys7, diagnostics)";
 server.listen(PORT, () => {
+  console.log("======================================================");
+  console.log(`InboxAI ${APP_VERSION}`);
   console.log(`Portal running at http://localhost:${PORT}`);
+  console.log("======================================================");
   resumeAllSessions();
   startAutomationScheduler();
 });
+
+// Public — confirm which code version is actually deployed (open in a browser):
+//   https://<your-app>.replit.app/version
+app.get("/version", (req, res) => res.json({ version: APP_VERSION }));
