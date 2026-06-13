@@ -290,6 +290,7 @@
           <button class="qa-btn" id="qaPayment"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M2.5 8h15"/></svg>Request payment</button>
           <button class="qa-btn" id="qaBooking"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg>Book appointment</button>
           <button class="qa-btn" id="qaLearn"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3a4 4 0 014 4c0 1.5-1 2.5-2 3.2-.7.5-1 .9-1 1.8M10 15v.5"/><circle cx="10" cy="10" r="8"/></svg><span id="qaLearnLabel">Learn behaviour</span></button>
+          <button class="qa-btn" id="qaFeedHistory"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13V3m0 0L6 7m4-4l4 4"/><path d="M3 13v2a2 2 0 002 2h10a2 2 0 002-2v-2"/></svg>Feed chat history</button>
         </div>
         <div id="chatSummary" class="chat-summary hidden"></div>
       </div>
@@ -828,6 +829,40 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
 </div>
 
 <!-- ═══ AGENT EDITOR MODAL ═══ -->
+<!-- ═══ FEED CHAT HISTORY MODAL ═══ -->
+<div class="modal-overlay hidden" id="feedHistoryModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title">Feed chat history</span>
+      <button class="modal-close" id="feedHistoryClose">×</button>
+    </div>
+    <p class="panel-sub" style="margin-top:0">When a chat first lands here it has no past. Upload your earlier WhatsApp conversation with this person and the AI will read it — learning the history, tone and style instantly, so you don't have to wait for 100 messages.</p>
+    <div class="feed-steps">
+      <ol style="margin:0 0 14px 18px;padding:0;line-height:1.7">
+        <li>Open this chat in <strong>WhatsApp</strong> on your phone.</li>
+        <li>Tap the contact's name → <strong>Export chat</strong>.</li>
+        <li>Choose <strong>Without media</strong> — you'll get a <code>.zip</code> file.</li>
+        <li><strong>Unzip</strong> it: inside is a <code>_chat.txt</code> (or <code>.txt</code>) file.</li>
+        <li>Upload that <code>.txt</code> file below.</li>
+      </ol>
+    </div>
+    <div class="modal-field">
+      <label>Owner name in the export (optional)</label>
+      <input id="feedOwnerName" placeholder="e.g. how WhatsApp shows your own name" />
+      <small style="color:var(--ink-3)">Helps the AI tell your messages from the customer's.</small>
+    </div>
+    <div class="modal-field">
+      <label>WhatsApp chat export (.txt)</label>
+      <input type="file" id="feedHistoryFile" accept=".txt,text/plain" />
+    </div>
+    <div id="feedHistoryResult" class="chat-summary hidden" style="margin-top:10px"></div>
+    <div class="modal-actions" style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="ghost-btn" id="feedHistoryCancel">Cancel</button>
+      <button class="primary-btn" id="feedHistorySubmit">Feed history to AI</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="agentModal">
   <div class="modal-card">
     <div class="modal-header">

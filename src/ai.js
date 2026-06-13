@@ -126,6 +126,57 @@ export async function learnChatBehaviour(tenantId, jid) {
 }
 
 /**
+ * Strip WhatsApp export decorations (timestamps, system lines, media markers)
+ * down to "Sender: message" lines. Handles the common bracketed and dash
+ * formats across locales.
+ */
+function cleanWhatsAppExport(raw) {
+  const lines = String(raw || "").split(/\r?\n/);
+  const out = [];
+  // [12/02/24, 10:30:45 AM] Name: msg   |   12/02/2024, 10:30 - Name: msg
+  const bracket = /^\[[^\]]+\]\s*([^:]{1,40}):\s?(.*)$/;
+  const dash = /^\d{1,4}[\/.\-]\d{1,2}[\/.\-]\d{1,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap]\.?[Mm]\.?)?\s*[-–]\s*([^:]{1,40}):\s?(.*)$/;
+  const mediaOmitted = /(<Media omitted>|image omitted|video omitted|audio omitted|sticker omitted|GIF omitted|document omitted|<attached:|This message was deleted|Messages and calls are end-to-end encrypted)/i;
+  for (const line of lines) {
+    const m = line.match(bracket) || line.match(dash);
+    if (m) {
+      const sender = m[1].trim();
+      const text = m[2].trim();
+      if (!text || mediaOmitted.test(text)) continue;
+      out.push(`${sender}: ${text}`);
+    } else if (out.length && line.trim()) {
+      // continuation of the previous (multi-line) message
+      out[out.length - 1] += " " + line.trim();
+    }
+  }
+  return out;
+}
+
+/**
+ * Learn a conversation's history from a pasted/exported WhatsApp transcript,
+ * so the agent understands the relationship without waiting for live messages.
+ * `ownerName` (optional) tells us which sender is the business owner.
+ */
+export async function learnChatBehaviourFromExport(tenantId, jid, rawText, ownerName = "") {
+  const lines = cleanWhatsAppExport(rawText);
+  if (lines.length < 5) { const e = new Error("Couldn't read this file — make sure it's the .txt from WhatsApp's \"Export chat\" (unzip first)."); throw e; }
+  const agent = resolveAgent(tenantId, q.getChat.get(tenantId, jid));
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, agent);
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
+  // Cap the transcript so we stay within context (keep the most recent tail).
+  let convo = lines.join("\n");
+  if (convo.length > 24000) convo = "…(earlier messages trimmed)…\n" + convo.slice(-24000);
+  const ownerHint = ownerName ? `The business owner in this transcript is "${ownerName}"; the other participant(s) are the customer.` : "Infer which participant is the business owner versus the customer from context.";
+  const system = `Analyze this exported WhatsApp conversation history. ${ownerHint} Return STRICT JSON with two keys: "summary" (4-6 sentences: who the customer is, the full relationship/history so far, what they want, current status, any commitments or important details) and "style" (how the customer communicates AND how the owner has been replying — tone, formality, language/Roman-Urdu, emoji/punctuation habits, and how the assistant should mirror them; ~100 words). Output ONLY the JSON object.`;
+  const turns = [{ role: "user", content: convo }];
+  const raw = provider === "openai" ? await callOpenAI(system, turns, apiKey, model) : await callAnthropic(system, turns);
+  let summary = "", style = "";
+  try { const m = (raw || "").match(/\{[\s\S]*\}/); const o = m ? JSON.parse(m[0]) : {}; summary = o.summary || ""; style = o.style || ""; }
+  catch { summary = raw || ""; }
+  return { summary, style, imported: lines.length };
+}
+
+/**
  * Pick which AI persona answers a chat:
  *   1. the agent explicitly assigned to the chat, else
  *   2. the tenant's first active agent (so once an agent exists, it's used — not the generic one), else

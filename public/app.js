@@ -2563,6 +2563,46 @@ $("qaLearn").addEventListener("click", async () => {
 });
 
 /* ============================================================
+   FEED CHAT HISTORY (import WhatsApp export .txt)
+   ============================================================ */
+$("qaFeedHistory").addEventListener("click", () => {
+  if (!activeJid) return toast("Open a chat first", "error");
+  $("feedHistoryFile").value = "";
+  $("feedOwnerName").value = "";
+  $("feedHistoryResult").classList.add("hidden");
+  $("feedHistoryResult").innerHTML = "";
+  $("feedHistoryModal").classList.remove("hidden");
+});
+const closeFeedHistory = () => $("feedHistoryModal").classList.add("hidden");
+$("feedHistoryClose").addEventListener("click", closeFeedHistory);
+$("feedHistoryCancel").addEventListener("click", closeFeedHistory);
+
+$("feedHistorySubmit").addEventListener("click", async () => {
+  if (!activeJid) return;
+  const file = $("feedHistoryFile").files[0];
+  if (!file) return toast("Pick the .txt file from your WhatsApp export", "error");
+  const res = $("feedHistoryResult");
+  res.classList.remove("hidden");
+  res.innerHTML = `<div class="suggest-loading">📥 Reading the history & learning…</div>`;
+  const fd = new FormData();
+  fd.append("file", file);
+  if ($("feedOwnerName").value.trim()) fd.append("ownerName", $("feedOwnerName").value.trim());
+  let r;
+  try {
+    const resp = await fetch(`/api/chats/${encodeURIComponent(activeJid)}/import-history`, { method: "POST", body: fd });
+    r = await resp.json();
+  } catch { r = { error: "Upload failed — try again" }; }
+  if (r?.error) {
+    res.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
+    return;
+  }
+  const summary = r?.summary ? `<div class="chat-summary-body"><strong>Summary</strong><br>${escHtml(r.summary).replace(/\n/g, "<br>")}</div>` : "";
+  const style = r?.style ? `<div class="chat-summary-body" style="margin-top:10px"><strong>Detected style</strong><br>${escHtml(r.style).replace(/\n/g, "<br>")}</div>` : "";
+  res.innerHTML = `<div class="chat-summary-body" style="color:var(--brand-600)">✓ Learned from ${r.imported || 0} past messages.</div>` + summary + style;
+  toast("History fed — AI now knows this conversation's past", "success");
+});
+
+/* ============================================================
    PAYMENTS (in-chat)
    ============================================================ */
 $("qaPayment").addEventListener("click", () => openPaymentModal(activeJid));

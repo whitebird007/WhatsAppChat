@@ -15,7 +15,7 @@ import {
   isConnected, connectedCount,
 } from "./sessions.js";
 import { createCheckout, createPortal, webhookHandler, billingEnabled } from "./billing.js";
-import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour } from "./ai.js";
+import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour, learnChatBehaviourFromExport } from "./ai.js";
 import { packSummary, installPack } from "./packs.js";
 import QRCode from "qrcode";
 import {
@@ -1117,6 +1117,19 @@ app.post("/api/chats/:jid/learn", async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
+// Feed prior history: import a WhatsApp "Export chat" .txt so the agent
+// understands the relationship without waiting for 100 live messages.
+app.post("/api/chats/:jid/import-history", upload.single("file"), async (req, res) => {
+  const jid = req.params.jid;
+  const text = req.file ? req.file.buffer.toString("utf8") : (req.body?.text || "");
+  if (!text.trim()) return res.status(400).json({ error: "No chat file provided." });
+  try {
+    const { summary, style, imported } = await learnChatBehaviourFromExport(req.tenant.id, jid, text, req.body?.ownerName || "");
+    q.setChatInsight.run(summary, style, req.tenant.id, jid);
+    res.json({ ok: true, summary, style, imported });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
 /* ============================================================
    STARTER PACKS
    ============================================================ */
@@ -1411,7 +1424,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.2 (text-only-ai, behaviour-learning, owner-style)";
+const APP_VERSION = "v0.3.3 (feed-chat-history-import)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);
