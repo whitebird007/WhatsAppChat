@@ -173,6 +173,7 @@ function handleWsEvent({ type, data }) {
   if (type === "message") handleIncomingMessage(data);
   if (type === "quota_exceeded") toast("Conversation quota reached — upgrade your plan", "error");
   if (type === "status_update") updateMessageTick(data);
+  if (type === "delivery_problem") showDeliveryBanner(data);
   if (type === "broadcast_progress") { if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
   if (type === "broadcast_done") { toast(`✅ Broadcast "${data.name}" finished sending`, "success"); if (!$("view-broadcasts").classList.contains("hidden")) loadBroadcasts(); }
 }
@@ -632,6 +633,32 @@ function renderBubble(m) {
 
   return `<div class="bubble ${cls}"${idAttr}>${escHtml(m.body)}${meta}</div>`;
 }
+
+// Surface a banner when WhatsApp rejects messages (delivery failures)
+const KNOWN_WA_CODES = {
+  463: "Rate / trust restriction — WhatsApp is temporarily limiting outbound messages from this number.",
+  479: "Recipient restriction — they may not accept messages from new senders.",
+  403: "Forbidden — the number may be blocked or restricted by WhatsApp.",
+  429: "Too many messages too fast — slow down sending.",
+};
+let deliveryFailCount = 0;
+function showDeliveryBanner(data) {
+  deliveryFailCount++;
+  const code = data?.code;
+  const hint = code && KNOWN_WA_CODES[code] ? ` ${KNOWN_WA_CODES[code]}` : "";
+  const codeStr = code ? ` (WhatsApp error ${code})` : " (no code returned by WhatsApp)";
+  $("deliveryBannerText").innerHTML =
+    `WhatsApp is rejecting messages${codeStr} — ${deliveryFailCount} not delivered. ` +
+    `They leave the app but never reach the recipient.${hint} ` +
+    `<a href="#" id="dbPauseAi">Pause AI replies</a> and try sending from your phone for a while.`;
+  $("deliveryBanner").classList.remove("hidden");
+  const pause = document.getElementById("dbPauseAi");
+  if (pause) pause.onclick = (e) => {
+    e.preventDefault();
+    if (activeJid) { POST("/api/chats/ai", { jid: activeJid, enabled: false }); toast("AI paused for this chat", "success"); }
+  };
+}
+$("deliveryBannerClose").addEventListener("click", () => { $("deliveryBanner").classList.add("hidden"); deliveryFailCount = 0; });
 
 // Live-update a sent message's delivery tick (✓ → ✓✓ → read / ✕ failed)
 function updateMessageTick(data) {

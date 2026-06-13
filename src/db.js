@@ -153,6 +153,7 @@ const migrationStmts = [
   "ALTER TABLE messages ADD COLUMN file_name TEXT",
   "ALTER TABLE messages ADD COLUMN media_url TEXT",
   "ALTER TABLE messages ADD COLUMN status INTEGER",
+  "ALTER TABLE chats ADD COLUMN phone TEXT",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -506,6 +507,8 @@ export const q = {
       unread = chats.unread + excluded.unread
   `),
   clearUnread: db.prepare("UPDATE chats SET unread = 0 WHERE tenant_id = ? AND jid = ?"),
+  getChatByPhone: db.prepare("SELECT * FROM chats WHERE tenant_id = ? AND phone = ? AND phone IS NOT NULL LIMIT 1"),
+  setChatPhone: db.prepare("UPDATE chats SET phone = ? WHERE tenant_id = ? AND jid = ?"),
   listChats: db.prepare("SELECT * FROM chats WHERE tenant_id = ? ORDER BY last_ts DESC LIMIT 200"),
   listUnreadChats: db.prepare("SELECT * FROM chats WHERE tenant_id = ? AND unread > 0 ORDER BY last_ts DESC LIMIT 200"),
   getChat: db.prepare("SELECT * FROM chats WHERE tenant_id = ? AND jid = ?"),

@@ -115,6 +115,15 @@ export function connectedCount() {
   return n;
 }
 
+/* Best-effort: pull WhatsApp's numeric rejection code (e.g. 463) out of a failed update. */
+function extractErrorCode(u) {
+  try {
+    const s = JSON.stringify(u);
+    const m = s.match(/"(?:error|code|errorCode)"\s*:\s*"?(\d{3})"?/);
+    return m ? Number(m[1]) : null;
+  } catch { return null; }
+}
+
 function extractText(msg) {
   const m = msg.message;
   if (!m) return null;
@@ -212,19 +221,51 @@ export async function startSession(tenantId) {
       if (st == null || !u.key?.id || !u.key?.fromMe) continue;
       const status = typeof st === "number" ? st : ({ PENDING: 1, SERVER_ACK: 2, DELIVERY_ACK: 3, READ: 4, PLAYED: 5, ERROR: 0 }[st] ?? null);
       if (status == null) continue;
-      if (status === 0) console.error(`[wa:${tenantId}] delivery FAILED for ${u.key.id} → ${u.key.remoteJid} (WhatsApp rejected the message)`);
       q.setMessageStatus.run(status, tenantId, u.key.id);
       broadcast(tenantId, { type: "status_update", data: { jid: u.key.remoteJid, id: u.key.id, status } });
+      if (status === 0) {
+        // Try to surface WhatsApp's actual rejection code from the update payload.
+        const code = u.update?.code ?? u.update?.errorCode ?? extractErrorCode(u) ?? null;
+        console.error(`[wa:${tenantId}] delivery FAILED for ${u.key.id} → ${u.key.remoteJid}${code ? ` (code ${code})` : ""}`);
+        broadcast(tenantId, { type: "delivery_problem", data: { jid: u.key.remoteJid, id: u.key.id, code } });
+      }
     }
   });
 }
 
+function phoneFromJid(jid) {
+  if (jid && jid.endsWith("@s.whatsapp.net")) return jid.split("@")[0].split(":")[0];
+  return null;
+}
+/* If a chat already exists for this phone under a different JID, return that JID. */
+function canonicalJid(tenantId, jid) {
+  const phone = phoneFromJid(jid);
+  if (phone) {
+    const ex = q.getChatByPhone.get(tenantId, phone);
+    if (ex && ex.jid !== jid) return ex.jid;
+  }
+  return jid;
+}
+
 async function handleMessage(tenantId, sock, msg) {
-  const jid = msg.key.remoteJid;
+  let jid = msg.key.remoteJid;
   if (!jid || jid === "status@broadcast" || jid.endsWith("@g.us")) return;
 
   const fromMe = !!msg.key.fromMe;
   const ts = (Number(msg.messageTimestamp) || Math.floor(Date.now() / 1000)) * 1000;
+
+  // Prevent duplicate threads for one contact (the @lid vs @s.whatsapp.net problem):
+  // figure out the phone, and if a chat already exists for that phone under another
+  // JID, file this message under the EXISTING chat instead of making a new one.
+  let phone = phoneFromJid(jid);
+  if (!phone && jid.endsWith("@lid")) {
+    const alt = msg.key.remoteJidAlt || msg.key.senderPn || null;
+    phone = phoneFromJid(alt);
+  }
+  if (phone) {
+    const existing = q.getChatByPhone.get(tenantId, phone);
+    if (existing && existing.jid !== jid) jid = existing.jid; // refile under the canonical chat
+  }
 
   // Text and/or media — download any attachment (photo, video, voice note, document)
   const text = extractText(msg);
@@ -254,6 +295,7 @@ async function handleMessage(tenantId, sock, msg) {
     last_ts: ts,
     unread: fromMe ? 0 : 1,
   });
+  if (phone) { try { q.setChatPhone.run(phone, tenantId, jid); } catch {} }
   broadcast(tenantId, {
     type: "message",
     data: { jid, from_me: fromMe, body, ts, name: msg.pushName || null,
@@ -348,6 +390,7 @@ export async function sendText(tenantId, jid, text, via = "human") {
   if (!session || session.status !== "connected") {
     throw new Error("WhatsApp is not connected");
   }
+  jid = canonicalJid(tenantId, jid);
   const sent = await session.sock.sendMessage(jid, { text });
   const ts = Date.now();
   const id = sent?.key?.id || `local-${ts}`;
@@ -386,6 +429,7 @@ function saveOutgoingMedia(tenantId, buffer, mimeType, kind) {
 export async function sendMedia(tenantId, jid, buffer, mimeType, fileName, caption = "", voice = false) {
   const session = sessions.get(tenantId);
   if (!session || session.status !== "connected") throw new Error("WhatsApp is not connected");
+  jid = canonicalJid(tenantId, jid);
 
   let msgContent, kind;
   if (mimeType.startsWith("image/")) { msgContent = { image: buffer, caption, mimetype: mimeType }; kind = "image"; }
