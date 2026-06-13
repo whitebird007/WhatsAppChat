@@ -235,7 +235,9 @@ p { text-wrap: pretty; }
 /* floating chips around phone */
 .float { position: absolute; z-index: 2; background: var(--card); color: var(--ink); border-radius: 14px; padding: 10px 13px; font-size: 0.82rem; font-weight: 600;
   box-shadow: 0 18px 40px -12px oklch(0.15 0.04 195 / 0.45), inset 0 0 0 1px var(--line-2); display: flex; align-items: center; gap: 9px; }
-.float .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; }
+.float .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none; color: var(--brand-700); }
+.float .ic svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.float .ic.o { color: var(--gold-deep); }
 .float.f1 { top: 12%; left: -14%; animation: bobf 6s ease-in-out infinite; }
 .float.f2 { bottom: 20%; right: -16%; animation: bobf 7s ease-in-out infinite reverse; }
 .float .ic.g { background: var(--brand-50); } .float .ic.o { background: oklch(0.96 0.05 86); }
@@ -308,7 +310,8 @@ p { text-wrap: pretty; }
 .mc { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 13px 15px; box-shadow: 0 8px 24px -14px oklch(0.2 0.04 200 / 0.4); }
 .mc + .mc { margin-top: 12px; }
 .mc-h { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 0.92rem; }
-.mc-h .e { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--brand-50); }
+.mc-h .e { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--brand-50); color: var(--brand-700); flex: none; }
+.mc-h .e svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .mc small { color: var(--ink-3); font-size: 0.82rem; }
 .tag { display: inline-flex; font-size: 0.72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--brand-50); color: var(--brand-700); }
 
@@ -346,6 +349,57 @@ p { text-wrap: pretty; }
 .gf .e { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-50); display: grid; place-items: center; font-size: 20px; margin-bottom: 14px; }
 .gf h3 { font-size: 1.12rem; margin-bottom: 7px; }
 .gf p { color: var(--ink-3); font-size: 0.95rem; margin: 0; }
+
+/* ---- Custom line-icon squares (used everywhere instead of emoji) ---- */
+.ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: linear-gradient(160deg, var(--brand-50), var(--brand-100)); color: var(--brand-700);
+  box-shadow: inset 0 0 0 1px oklch(0.46 0.14 var(--h) / 0.12); }
+.ico svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ico.sm { width: 30px; height: 30px; border-radius: 9px; } .ico.sm svg { width: 16px; height: 16px; }
+.ico.dk { background: oklch(1 0 0 / 0.08); color: var(--brand-300); box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.12); }
+
+/* ============================================================
+   AGENCIES — asymmetric bento
+   ============================================================ */
+.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+.bento .tile {
+  background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-xl);
+  padding: clamp(20px, 2.4vw, 30px); position: relative; overflow: hidden;
+  transition: transform .3s var(--ease-out-quart), box-shadow .3s var(--ease-out-quart);
+}
+.bento .tile:hover { transform: translateY(-4px); box-shadow: 0 26px 56px -28px oklch(0.2 0.05 200 / 0.5); }
+.bento .tile h3 { font-size: 1.18rem; margin: 16px 0 7px; letter-spacing: -0.03em; }
+.bento .tile p { color: var(--ink-3); font-size: 0.96rem; margin: 0; }
+.bento .tile-lead { grid-column: span 3; grid-row: span 2; display: flex; flex-direction: column;
+  background: linear-gradient(165deg, var(--ink-950), oklch(0.24 0.045 185)); color: var(--on-dark); border-color: transparent; }
+.tile-lead h3 { color: #fff; font-size: clamp(1.4rem, 2.4vw, 1.9rem); }
+.tile-lead p { color: var(--on-dark-2); max-width: 40ch; }
+.tile-wide { grid-column: span 3; }
+.tile-third { grid-column: span 2; }
+
+/* workspace-switcher visual inside the lead tile */
+.ws-stack { margin-top: auto; display: flex; flex-direction: column; gap: 9px; padding-top: 26px; }
+.ws { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 13px;
+  background: oklch(1 0 0 / 0.06); border: 1px solid oklch(1 0 0 / 0.08); transition: background .25s, transform .25s; }
+.ws:hover { background: oklch(1 0 0 / 0.1); transform: translateX(3px); }
+.ws .av { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 0.82rem; flex: none; }
+.ws .nm { font-weight: 650; font-size: 0.92rem; color: #fff; }
+.ws .sub { font-size: 0.76rem; color: oklch(0.74 0.02 175); }
+.ws .live { margin-left: auto; font-size: 0.7rem; font-weight: 700; color: var(--brand-300); display: inline-flex; align-items: center; gap: 5px; }
+.ws .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-400); }
+.ws.active { background: oklch(0.5 0.14 158 / 0.22); border-color: oklch(0.6 0.13 158 / 0.4); }
+
+/* brand-palette swatches in white-label tile */
+.swatches { display: flex; gap: 8px; margin-top: 16px; }
+.swatches i { width: 30px; height: 30px; border-radius: 8px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.06); transition: transform .2s; }
+.tile:hover .swatches i { transform: translateY(-3px); }
+.swatches i:nth-child(2) { transition-delay: .04s; } .swatches i:nth-child(3) { transition-delay: .08s; }
+.swatches i:nth-child(4) { transition-delay: .12s; } .swatches i:nth-child(5) { transition-delay: .16s; }
+@media (max-width: 860px) {
+  .bento { grid-template-columns: 1fr 1fr; }
+  .tile-lead, .tile-wide, .tile-third { grid-column: span 2; grid-row: auto; }
+}
+@media (max-width: 560px) { .bento { grid-template-columns: 1fr; } .tile-lead, .tile-wide, .tile-third { grid-column: span 1; } }
 
 /* ============================================================
    CTA band + footer
