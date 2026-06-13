@@ -510,11 +510,22 @@ app.post("/api/ai/improve", async (req, res) => {
 // AI-assist for authoring an agent's instructions / playbook / rules
 app.post("/api/ai/draft-agent-field", async (req, res) => {
   const { field, draft, agentName } = req.body || {};
-  if (!["instructions", "playbook", "rules"].includes(field)) return res.status(400).json({ error: "invalid field" });
+  if (!["instructions", "playbook", "rules", "style"].includes(field)) return res.status(400).json({ error: "invalid field" });
   try {
     const text = await draftAgentField(req.tenant.id, { field, draft: draft || "", agentName: agentName || "" });
     if (!text) return res.status(503).json({ error: "AI unavailable — check your API key" });
     res.json({ text });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// Learn a writing style from uploaded chat files WITHOUT persisting it —
+// used by the agent modal to fill a specific agent's style field.
+app.post("/api/ai/learn-style-from-files", upload.array("files", 20), async (req, res) => {
+  const texts = (req.files || []).map((f) => f.buffer.toString("utf8")).filter((t) => t.trim());
+  if (!texts.length) return res.status(400).json({ error: "Upload at least one chat .txt file." });
+  try {
+    const { style, imported } = await learnOwnerStyleFromExports(req.tenant.id, texts, req.body?.ownerName || "");
+    res.json({ style, imported });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
@@ -639,31 +650,34 @@ app.get("/api/agents", (req, res) => res.json(q.listAgents.all(req.tenant.id)));
 
 // Live-test an agent (even unsaved) from the create/edit form
 app.post("/api/agents/test", async (req, res) => {
-  const { instructions, playbook, rules, model, openai_api_key, messages } = req.body || {};
+  const { instructions, playbook, rules, model, openai_api_key, writing_style, messages } = req.body || {};
   try {
-    const reply = await testAgentReply(req.tenant.id, { instructions, playbook, rules, model, openai_api_key }, messages || []);
+    const reply = await testAgentReply(req.tenant.id, { instructions, playbook, rules, model, openai_api_key, writing_style }, messages || []);
     if (!reply) return res.status(503).json({ error: "AI unavailable — check your API key" });
     res.json({ reply });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 app.post("/api/agents", (req, res) => {
-  const { name, emoji, instructions, playbook, rules, model, openai_api_key } = req.body || {};
+  const { name, emoji, instructions, playbook, rules, model, openai_api_key, writing_style } = req.body || {};
   if (!name) return res.status(400).json({ error: "name required" });
   q.addAgent.run(
     req.tenant.id, name, emoji || "🤖",
     instructions || "", playbook || "", rules || "",
-    model || "gpt-4o-mini", openai_api_key || "", Date.now()
+    model || "gpt-4o-mini", openai_api_key || "", writing_style || "", Date.now()
   );
   res.json({ ok: true });
 });
 
 app.put("/api/agents/:id", (req, res) => {
-  const { name, emoji, instructions, playbook, rules, model, openai_api_key } = req.body || {};
+  const { name, emoji, instructions, playbook, rules, model, openai_api_key, writing_style } = req.body || {};
+  // Keep the saved API key if the form sent a blank one (key fields are never pre-filled)
+  const existing = q.getAgent.get(req.params.id, req.tenant.id);
+  const key = (openai_api_key && openai_api_key.trim()) ? openai_api_key : (existing?.openai_api_key || "");
   q.updateAgent.run(
     name, emoji || "🤖",
     instructions || "", playbook || "", rules || "",
-    model || "gpt-4o-mini", openai_api_key || "",
+    model || "gpt-4o-mini", key, writing_style || "",
     req.params.id, req.tenant.id
   );
   res.json({ ok: true });
@@ -1456,7 +1470,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.6 (instant-global-learn-import, agent-phone-tester)";
+const APP_VERSION = "v0.3.7 (per-agent-style, default-ai-agent, closable-summary)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);

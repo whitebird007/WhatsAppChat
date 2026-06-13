@@ -157,6 +157,7 @@ const migrationStmts = [
   "ALTER TABLE chats ADD COLUMN profile_pic TEXT",
   "ALTER TABLE chats ADD COLUMN ai_summary TEXT",
   "ALTER TABLE chats ADD COLUMN ai_style TEXT",
+  "ALTER TABLE agents ADD COLUMN writing_style TEXT",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -579,10 +580,10 @@ export const q = {
   settingByKeyValue: db.prepare("SELECT tenant_id FROM settings WHERE key = ? AND value = ? LIMIT 1"),
 
   // agents
-  listAgents: db.prepare("SELECT id, tenant_id, name, emoji, instructions, playbook, rules, model, active, created FROM agents WHERE tenant_id = ? ORDER BY id"),
+  listAgents: db.prepare("SELECT id, tenant_id, name, emoji, instructions, playbook, rules, model, writing_style, active, created FROM agents WHERE tenant_id = ? ORDER BY id"),
   getAgent: db.prepare("SELECT * FROM agents WHERE id = ? AND tenant_id = ?"),
-  addAgent: db.prepare("INSERT INTO agents (tenant_id, name, emoji, instructions, playbook, rules, model, openai_api_key, active, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)"),
-  updateAgent: db.prepare("UPDATE agents SET name = ?, emoji = ?, instructions = ?, playbook = ?, rules = ?, model = ?, openai_api_key = ? WHERE id = ? AND tenant_id = ?"),
+  addAgent: db.prepare("INSERT INTO agents (tenant_id, name, emoji, instructions, playbook, rules, model, openai_api_key, writing_style, active, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)"),
+  updateAgent: db.prepare("UPDATE agents SET name = ?, emoji = ?, instructions = ?, playbook = ?, rules = ?, model = ?, openai_api_key = ?, writing_style = ? WHERE id = ? AND tenant_id = ?"),
   toggleAgent: db.prepare("UPDATE agents SET active = ? WHERE id = ? AND tenant_id = ?"),
   deleteAgent: db.prepare("DELETE FROM agents WHERE id = ? AND tenant_id = ?"),
 

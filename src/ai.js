@@ -78,6 +78,7 @@ export async function draftAgentField(tenantId, { field, draft = "", agentName =
     instructions: "the agent's INSTRUCTIONS — a clear paragraph describing the agent's role, who it serves, its communication style/tone, and its goals. Write 3-6 sentences in second person ('You are…').",
     playbook: "the agent's PLAYBOOK — a numbered, step-by-step conversation guide the agent follows from greeting to close or human handoff. Output 5-8 concise numbered steps.",
     rules: "the agent's ADDITIONAL RULES — hard constraints the agent must always follow. Output 4-7 concise bullet points starting with '- '.",
+    style: "the agent's WRITING STYLE — a short guide for how this agent should sound: tone (warm/formal/casual), formality, emoji & punctuation habits, sentence length, greeting/sign-off, language. Write it as direct instructions, e.g. 'Keep replies short and upbeat. Use one emoji max...'. Max ~120 words.",
   };
   const spec = specs[field] || specs.instructions;
   const ctx = agentName ? ` The agent is named "${agentName}".` : "";
@@ -177,6 +178,7 @@ export async function testAgentReply(tenantId, draft = {}, messages = []) {
   let system = (draft.instructions || "").trim() || "You are a helpful WhatsApp business assistant.";
   if ((draft.playbook || "").trim()) system += `\n\n## Conversation Playbook:\n${draft.playbook}`;
   if ((draft.rules || "").trim()) system += `\n\n## Rules:\n${draft.rules}`;
+  if ((draft.writing_style || "").trim()) system += `\n\n## Write in this agent's voice:\n${draft.writing_style}`;
   system += "\n\nThis is a TEST conversation with the owner. Reply exactly as you would to a real customer on WhatsApp — concise and natural.";
   let turns = (messages || []).slice(-20).map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") }));
   while (turns.length && turns[0].role !== "user") turns.shift();
@@ -282,24 +284,25 @@ function buildSystemPrompt(tenantId, agent, chat = null) {
   } else {
     prompt = getSetting(tenantId, "ai_system_prompt") || "You are a helpful assistant.";
   }
-  return prompt + behaviourAddendum(tenantId, chat);
+  return prompt + behaviourAddendum(tenantId, agent, chat);
 }
 
-/* Learned behaviour: the owner's global voice + this conversation's summary & the
-   customer's communication style. Appended to every AI reply so it sounds natural. */
-function behaviourAddendum(tenantId, chat) {
+/* Learned behaviour appended to every AI reply so it sounds natural.
+   Style precedence (most specific wins):
+     1. the thread's own learned style (imported history / 100-msg learn)
+     2. the replying agent's own writing style
+     3. the global Default AI Agent voice (owner_style) — only when no agent
+   The conversation summary is always included when available. */
+function behaviourAddendum(tenantId, agent, chat) {
   let extra = "";
-  // Precedence: a thread that has its OWN learned style (from imported history
-  // or from reaching the learn threshold) wins — the global owner style is
-  // suppressed for that thread so the AI replies in this conversation's voice.
-  // Only chats with no per-thread style fall back to the global owner voice.
+  if (chat?.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
   if (chat?.ai_style) {
-    if (chat.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
     extra += `\n\n## Reply in THIS conversation's established style (mirror it naturally):\n${chat.ai_style}`;
-  } else {
+  } else if (agent?.writing_style?.trim()) {
+    extra += `\n\n## Write in this agent's voice:\n${agent.writing_style}`;
+  } else if (!agent) {
     const ownerStyle = getSetting(tenantId, "owner_style");
     if (ownerStyle) extra += `\n\n## Write in the business owner's voice:\n${ownerStyle}`;
-    if (chat?.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
   }
   return extra;
 }

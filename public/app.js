@@ -498,6 +498,7 @@ function renderConvHeaderRight(chat) {
    ============================================================ */
 async function loadChatDetail(jid, chat) {
   $("chatSummary").classList.add("hidden");
+  $("chatSummaryContent").innerHTML = "";
   // Lifecycle
   const lc = chat.lifecycle || "new_lead";
   $("lifecycleSelect").value = lc;
@@ -1026,6 +1027,8 @@ function openAgentModal(agent) {
   $("agentInstructions").value = agent?.instructions || "";
   $("agentPlaybook").value = agent?.playbook || "";
   $("agentRules").value = agent?.rules || "";
+  $("agentStyle").value = agent?.writing_style || "";
+  $("agentStyleFiles").value = "";
   $("agentApiKey").value = ""; // never pre-fill API keys
   $("agentModel").value = agent?.model || "gpt-4o-mini";
   resetAgentTester();
@@ -1076,6 +1079,7 @@ async function sendAgentTest() {
     instructions: $("agentInstructions").value,
     playbook: $("agentPlaybook").value,
     rules: $("agentRules").value,
+    writing_style: $("agentStyle").value,
     model: $("agentModel").value,
     openai_api_key: $("agentApiKey").value.trim(),
     messages: testMsgs,
@@ -1122,6 +1126,29 @@ document.querySelectorAll(".ai-write-btn").forEach((btn) => {
   });
 });
 
+// Learn THIS agent's writing style from uploaded chat files → fills the field
+$("agentStyleImportBtn").addEventListener("click", async () => {
+  const files = $("agentStyleFiles").files;
+  if (!files.length) return toast("Pick at least one .txt export", "error");
+  const btn = $("agentStyleImportBtn");
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "⚡ Learning…";
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+  let r;
+  try {
+    const resp = await fetch("/api/ai/learn-style-from-files", { method: "POST", body: fd });
+    r = await resp.json();
+  } catch { r = { error: "Upload failed — try again" }; }
+  btn.disabled = false; btn.textContent = original;
+  if (r?.style) {
+    $("agentStyle").value = r.style.trim();
+    toast(`Style learned from ${r.imported || 0} messages — edit as you like`, "success");
+  } else {
+    toast(r?.error || "Couldn't learn from these files", "error");
+  }
+});
+
 $("agentModalSave").addEventListener("click", async () => {
   const id = $("agentModalId").value;
   const body = {
@@ -1130,6 +1157,7 @@ $("agentModalSave").addEventListener("click", async () => {
     instructions: $("agentInstructions").value.trim(),
     playbook: $("agentPlaybook").value.trim(),
     rules: $("agentRules").value.trim(),
+    writing_style: $("agentStyle").value.trim(),
     model: $("agentModel").value,
     openai_api_key: $("agentApiKey").value.trim(),
   };
@@ -2629,10 +2657,19 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest("#suggestPopover") && !e.target.closest("#suggestBtn")) $("suggestPopover").classList.add("hidden");
 });
 
+// Show the summary panel and return its content element (the × stays put).
+function openSummary() {
+  $("chatSummary").classList.remove("hidden");
+  return $("chatSummaryContent");
+}
+$("chatSummaryClose").addEventListener("click", () => {
+  $("chatSummary").classList.add("hidden");
+  $("chatSummaryContent").innerHTML = "";
+});
+
 $("qaSummarize").addEventListener("click", async () => {
   if (!activeJid) return;
-  const box = $("chatSummary");
-  box.classList.remove("hidden");
+  const box = openSummary();
   box.innerHTML = `<div class="suggest-loading">✨ Summarizing…</div>`;
   const r = await POST("/api/ai/summarize", { jid: activeJid });
   box.innerHTML = r?.summary ? `<div class="chat-summary-body">${escHtml(r.summary).replace(/\n/g, "<br>")}</div>` : `<div class="suggest-loading">${escHtml(r?.error || "Couldn't summarize")}</div>`;
@@ -2659,8 +2696,7 @@ function updateLearnButton(count) {
 
 $("qaLearn").addEventListener("click", async () => {
   if (!activeJid) return;
-  const box = $("chatSummary");
-  box.classList.remove("hidden");
+  const box = openSummary();
   box.innerHTML = `<div class="suggest-loading">🧠 Studying this conversation…</div>`;
   const r = await POST(`/api/chats/${encodeURIComponent(activeJid)}/learn`, {});
   if (r?.error) {

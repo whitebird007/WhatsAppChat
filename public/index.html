@@ -292,7 +292,7 @@
           <button class="qa-btn" id="qaLearn"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3a4 4 0 014 4c0 1.5-1 2.5-2 3.2-.7.5-1 .9-1 1.8M10 15v.5"/><circle cx="10" cy="10" r="8"/></svg><span id="qaLearnLabel">Learn behaviour</span></button>
           <button class="qa-btn" id="qaFeedHistory"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13V3m0 0L6 7m4-4l4 4"/><path d="M3 13v2a2 2 0 002 2h10a2 2 0 002-2v-2"/></svg>Feed chat history</button>
         </div>
-        <div id="chatSummary" class="chat-summary hidden"></div>
+        <div id="chatSummary" class="chat-summary hidden"><button class="summary-close" id="chatSummaryClose" aria-label="Close" title="Close">×</button><div id="chatSummaryContent"></div></div>
       </div>
       <!-- Pipeline / Deal -->
       <div class="detail-section">
@@ -557,8 +557,8 @@
   <!-- ═══ AI SETTINGS VIEW ═══ -->
   <section class="view view-panel hidden" id="view-settings">
     <div class="panel">
-      <h2>AI assistant settings</h2>
-      <div class="info-note">These are your <strong>generic fallback</strong> settings — used only when you haven't created any <strong>AI Agents</strong>. As soon as you create an agent, conversations use that agent instead. Assign a specific agent per chat from the chat panel.</div>
+      <h2>Default AI Agent</h2>
+      <div class="info-note">This is your <strong>Default AI Agent</strong> — used only when a chat has <strong>no AI Agent</strong> created or assigned. As soon as you create an agent (and it's active or assigned to a chat), that agent replies instead, using its own instructions and writing style. Assign a specific agent per chat from the chat panel.</div>
       <label class="ai-toggle big">
         <input type="checkbox" id="aiGlobal" />
         <span>AI auto-replies enabled (master switch)</span>
@@ -575,8 +575,8 @@
       <p class="saved-note hidden" id="savedNote">Saved.</p>
 
       <hr style="border:none;border-top:1px solid var(--line-2);margin:28px 0" />
-      <h2 style="font-size:18px">Your writing style (global)</h2>
-      <p class="panel-sub">Teach the AI to reply in <strong>your</strong> voice. It studies the messages you've sent across all chats — your tone, formality, emoji and punctuation habits — so AI replies sound like you. Available once you've sent 100+ messages.</p>
+      <h2 style="font-size:18px">Default AI Agent — writing style</h2>
+      <p class="panel-sub">Teach the Default AI Agent to reply in <strong>your</strong> voice. It studies the messages you've sent across all chats — your tone, formality, emoji and punctuation habits — so its replies sound like you. This style is used only when no AI Agent handles the chat. Available once you've sent 100+ messages (or import chat files below).</p>
       <div id="ownerStyleStatus" class="info-note" style="display:none"></div>
       <button class="primary-btn" id="learnStyleBtn">Learn my writing style</button>
 
@@ -911,6 +911,17 @@ PATCH /api/v1/chats/:jid              # Update chat (lifecycle, etc.)</pre>
     <div class="modal-field">
       <label class="label-row">Additional Rules <span>constraints the agent must follow</span><button type="button" class="ai-write-btn" id="aiWriteRules" data-field="rules" data-target="agentRules">✨ AI write</button></label>
       <textarea id="agentRules" rows="3" placeholder="- Never quote prices more than 10% off standard rate&#10;- Always respond in the same language as the customer&#10;- Never make delivery promises"></textarea>
+    </div>
+
+    <div class="modal-field">
+      <label class="label-row">Writing style &amp; tone <span>how THIS agent should sound</span><button type="button" class="ai-write-btn" id="aiWriteStyle" data-field="style" data-target="agentStyle">✨ AI write</button></label>
+      <textarea id="agentStyle" rows="3" placeholder="e.g. Warm and upbeat. Short sentences. One emoji max. Greet by first name, never use slang."></textarea>
+      <div class="style-import" style="margin-top:8px;padding:12px;border:1px dashed var(--line-2);border-radius:10px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:4px">⚡ Learn this agent's style from chat files</div>
+        <div class="field-hint" style="margin-bottom:8px">Upload WhatsApp chat exports (.txt — chat → Export chat → Without media → unzip). The AI reads them and fills the style above. Multiple files allowed.</div>
+        <input type="file" id="agentStyleFiles" accept=".txt,text/plain" multiple style="margin-bottom:8px" />
+        <button type="button" class="ghost-btn" id="agentStyleImportBtn">Learn style from these files</button>
+      </div>
     </div>
 
     <div class="modal-row">
