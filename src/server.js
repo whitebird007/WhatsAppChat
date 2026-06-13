@@ -1365,7 +1365,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.0 (sends:in-thread, baileys7, diagnostics)";
+const APP_VERSION = "v0.3.1 (ticks-monotonic, real-phone, avatar-fallback, ai-error)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);

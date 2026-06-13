@@ -184,6 +184,7 @@ function handleWsEvent({ type, data }) {
   if (type === "quota_exceeded") toast("Conversation quota reached — upgrade your plan", "error");
   if (type === "status_update") updateMessageTick(data);
   if (type === "delivery_problem") showDeliveryBanner(data);
+  if (type === "ai_error") toast(`🤖 AI couldn't reply: ${data.message}. Check your OpenAI key in AI Agents.`, "error");
   if (type === "avatar") {
     const c = allChats.find((x) => x.jid === data.jid);
     if (c) { c.profile_pic = data.url; renderChatList(); }
@@ -406,17 +407,19 @@ async function openChat(jid) {
   if (chat.profile_pic) av.innerHTML = `<img class="avatar-img" src="${escHtml(chat.profile_pic)}" alt="">`;
   else av.textContent = init;
 
-  // Extract raw phone number from JID
-  const phone = jid.replace(/@s\.whatsapp\.net$/, "").replace(/@g\.us$/, "");
-  const displayName = chat.name || `+${phone}`;
+  // Real phone number: prefer the stored phone (for @lid contacts the JID digits
+  // are an internal id, NOT the phone). Fall back to the JID digits for plain numbers.
+  const jidDigits = jid.replace(/@s\.whatsapp\.net$/, "").replace(/@lid$/, "").replace(/@g\.us$/, "");
+  const phone = chat.phone || (jid.endsWith("@s.whatsapp.net") ? jidDigits : "");
+  const displayName = chat.name || (phone ? `+${phone}` : jidDigits);
   $("convName").textContent = displayName;
 
-  // Phone row — always show number; show separately from name if name exists
+  // Phone row — always show the real number when we know it
   const phoneEl = $("convPhone");
-  phoneEl.textContent = chat.name ? `📞 +${phone}` : "";
-  phoneEl.style.display = chat.name ? "" : "none";
+  if (phone) { phoneEl.textContent = `📞 +${phone}`; phoneEl.style.display = ""; }
+  else { phoneEl.textContent = ""; phoneEl.style.display = "none"; }
 
-  // Chat ID / JID
+  // Chat ID / JID (the internal WhatsApp address)
   $("convJidLabel").textContent = `ID: ${jid}`;
 
   // Update header right

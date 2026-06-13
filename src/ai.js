@@ -33,12 +33,14 @@ export async function generateReply(tenantId, jid) {
 
   const { apiKey, model, provider } = resolveProviderConfig(tenantId, agent);
 
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
   try {
     if (provider === "openai") return await callOpenAI(systemPrompt, turns, apiKey, model);
     return await callAnthropic(systemPrompt, turns);
   } catch (err) {
     console.error(`[ai:${tenantId}] reply failed:`, err.message);
-    return null;
+    // Surface provider errors (e.g. invalid OpenAI key) instead of failing silently.
+    const e = new Error(err.message); e.aiProviderError = true; throw e;
   }
 }
 

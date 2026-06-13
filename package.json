@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-ai-portal",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Self-hosted WhatsApp inbox with AI auto-replies. Connect via QR scan, chat from a web portal, automate with keyword rules + LLM.",
   "type": "module",
   "main": "src/server.js",

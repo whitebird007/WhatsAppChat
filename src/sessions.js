@@ -25,11 +25,14 @@ const silentLogger = pino({ level: "silent" });
 
 /* Fetch a contact's WhatsApp profile photo (if public) and cache it locally.
    Fire-and-forget; only runs when we don't already have one. */
-async function fetchAvatar(tenantId, jid, sock) {
+async function fetchAvatar(tenantId, jid, sock, altJid = null) {
   try {
     const chat = q.getChat.get(tenantId, jid);
     if (chat?.profile_pic) return; // already have one
-    const url = await sock.profilePictureUrl(jid, "image").catch(() => null);
+    // @lid contacts often need the phone JID for the photo lookup — try both.
+    let url = await sock.profilePictureUrl(jid, "image").catch(() => null);
+    if (!url && altJid) url = await sock.profilePictureUrl(altJid, "image").catch(() => null);
+    if (!url && chat?.phone) url = await sock.profilePictureUrl(`${chat.phone}@s.whatsapp.net`, "image").catch(() => null);
     if (!url) return;
     const res = await fetch(url);
     if (!res.ok) return;
@@ -243,6 +246,10 @@ export async function startSession(tenantId) {
       if (st == null || !u.key?.id || !u.key?.fromMe) continue;
       const status = typeof st === "number" ? st : ({ PENDING: 1, SERVER_ACK: 2, DELIVERY_ACK: 3, READ: 4, PLAYED: 5, ERROR: 0 }[st] ?? null);
       if (status == null) continue;
+      // Status only moves forward (sent → delivered → read). Ignore downgrades —
+      // e.g. a message-retry re-ack must never turn a blue "read" back into one tick.
+      const cur = q.getMessageStatus.get(tenantId, u.key.id)?.status;
+      if (status !== 0 && cur != null && status <= cur) continue;
       q.setMessageStatus.run(status, tenantId, u.key.id);
       broadcast(tenantId, { type: "status_update", data: { jid: u.key.remoteJid, id: u.key.id, status } });
       if (status === 0) {
@@ -318,7 +325,7 @@ async function handleMessage(tenantId, sock, msg) {
     unread: fromMe ? 0 : 1,
   });
   if (phone) { try { q.setChatPhone.run(phone, tenantId, jid); } catch {} }
-  fetchAvatar(tenantId, jid, sock).catch(() => {}); // fire-and-forget profile photo
+  fetchAvatar(tenantId, jid, sock, msg.key.remoteJidAlt || null).catch(() => {}); // fire-and-forget profile photo
   broadcast(tenantId, {
     type: "message",
     data: { jid, from_me: fromMe, body, ts, name: msg.pushName || null,
@@ -384,7 +391,14 @@ async function handleMessage(tenantId, sock, msg) {
   const globalAi = getSetting(tenantId, "ai_global_enabled") === "1";
   const chat = q.getChat.get(tenantId, jid);
   if (globalAi && chat?.ai_enabled) {
-    const reply = await generateReply(tenantId, jid);
+    let reply = null;
+    try {
+      reply = await generateReply(tenantId, jid);
+    } catch (err) {
+      // e.g. invalid OpenAI key — tell the user in-app instead of failing silently
+      console.error(`[ai:${tenantId}] ${err.message}`);
+      broadcast(tenantId, { type: "ai_error", data: { jid, message: err.message } });
+    }
     if (reply) {
       // Human-like: show "typing…", then wait ~3–10s scaled to reply length, then send.
       try { await sock.sendPresenceUpdate("composing", jid); } catch {}
