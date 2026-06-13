@@ -15,7 +15,7 @@ import {
   isConnected, connectedCount,
 } from "./sessions.js";
 import { createCheckout, createPortal, webhookHandler, billingEnabled } from "./billing.js";
-import { improveMessage, suggestReplies, summarizeChat } from "./ai.js";
+import { improveMessage, suggestReplies, summarizeChat, learnOwnerStyle, learnChatBehaviour } from "./ai.js";
 import { packSummary, installPack } from "./packs.js";
 import QRCode from "qrcode";
 import {
@@ -1072,6 +1072,52 @@ app.post("/api/ai/summarize", async (req, res) => {
 });
 
 /* ============================================================
+   BEHAVIOUR LEARNING (global owner voice + per-chat style/summary)
+   ============================================================ */
+const LEARN_THRESHOLD = 100;
+
+// Global "your voice" style
+app.get("/api/owner-style", (req, res) => {
+  const ownerMsgs = q.countOwnerMessages.get(req.tenant.id).n;
+  res.json({
+    style: getSetting(req.tenant.id, "owner_style") || "",
+    ownerMsgs,
+    threshold: LEARN_THRESHOLD,
+    eligible: ownerMsgs >= LEARN_THRESHOLD,
+  });
+});
+app.post("/api/owner-style/learn", async (req, res) => {
+  try {
+    const style = await learnOwnerStyle(req.tenant.id);
+    if (!style) return res.status(503).json({ error: "AI returned nothing — check your API key" });
+    q.setSetting.run(req.tenant.id, "owner_style", style);
+    res.json({ ok: true, style });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+app.delete("/api/owner-style", (req, res) => { q.setSetting.run(req.tenant.id, "owner_style", ""); res.json({ ok: true }); });
+
+// Per-chat behaviour
+app.get("/api/chats/:jid/insight", (req, res) => {
+  const chat = q.getChat.get(req.tenant.id, req.params.jid);
+  res.json({
+    summary: chat?.ai_summary || "",
+    style: chat?.ai_style || "",
+    count: q.countChatMessages.get(req.tenant.id, req.params.jid).n,
+    threshold: LEARN_THRESHOLD,
+  });
+});
+app.post("/api/chats/:jid/learn", async (req, res) => {
+  const jid = req.params.jid;
+  const count = q.countChatMessages.get(req.tenant.id, jid).n;
+  if (count < LEARN_THRESHOLD) return res.status(400).json({ error: `Need ${LEARN_THRESHOLD} messages in this chat first (have ${count}).` });
+  try {
+    const { summary, style } = await learnChatBehaviour(req.tenant.id, jid);
+    q.setChatInsight.run(summary, style, req.tenant.id, jid);
+    res.json({ ok: true, summary, style });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+/* ============================================================
    STARTER PACKS
    ============================================================ */
 app.get("/api/starter-packs", (req, res) => res.json(packSummary()));
@@ -1365,7 +1411,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.3.1 (ticks-monotonic, real-phone, avatar-fallback, ai-error)";
+const APP_VERSION = "v0.3.2 (text-only-ai, behaviour-learning, owner-style)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`InboxAI ${APP_VERSION}`);

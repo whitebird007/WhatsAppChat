@@ -448,6 +448,9 @@ async function openChat(jid) {
     tt.title = "You're starting this chat. WhatsApp may restrict messages to people who haven't contacted you first.";
   }
 
+  // Per-chat "Learn behaviour" button: gated to 100+ messages in this thread
+  updateLearnButton(Array.isArray(msgs) ? msgs.length : 0);
+
   // Re-render chat list (clear unread highlight)
   renderChatList();
   updateUnreadBadge();
@@ -1120,7 +1123,39 @@ async function loadSettings() {
   $("aiGlobal").checked = s?.ai_global_enabled === "1";
   $("aiPrompt").value = s?.ai_system_prompt || "";
   $("aiHandoff").value = s?.ai_handoff_keywords || "";
+  loadOwnerStyle();
 }
+
+async function loadOwnerStyle() {
+  const d = await GET("/api/owner-style");
+  const status = $("ownerStyleStatus");
+  const btn = $("learnStyleBtn");
+  const box = $("ownerStyleBox");
+  if (!d) return;
+  status.style.display = "block";
+  status.textContent = `You've sent ${d.ownerMsgs} message${d.ownerMsgs === 1 ? "" : "s"}. ` +
+    (d.eligible ? "Ready to learn your style." : `Need ${d.threshold}+ to learn your style.`);
+  btn.disabled = !d.eligible;
+  if (d.style) {
+    box.classList.remove("hidden");
+    box.innerHTML = `<div class="chat-summary-body"><strong>Your learned style</strong><br>${escHtml(d.style).replace(/\n/g, "<br>")}</div>`;
+  } else {
+    box.classList.add("hidden");
+  }
+}
+
+$("learnStyleBtn").addEventListener("click", async () => {
+  const box = $("ownerStyleBox");
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="suggest-loading">🧠 Studying how you write…</div>`;
+  const r = await POST("/api/owner-style/learn", {});
+  if (r?.error) {
+    box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="chat-summary-body"><strong>Your learned style</strong><br>${escHtml(r.style || "").replace(/\n/g, "<br>")}</div>`;
+  toast("Writing style learned — AI now replies in your voice", "success");
+});
 
 $("settingsSave").addEventListener("click", async () => {
   const r = await POST("/api/settings", {
@@ -2490,6 +2525,41 @@ $("qaSummarize").addEventListener("click", async () => {
   box.innerHTML = `<div class="suggest-loading">✨ Summarizing…</div>`;
   const r = await POST("/api/ai/summarize", { jid: activeJid });
   box.innerHTML = r?.summary ? `<div class="chat-summary-body">${escHtml(r.summary).replace(/\n/g, "<br>")}</div>` : `<div class="suggest-loading">${escHtml(r?.error || "Couldn't summarize")}</div>`;
+});
+
+/* ============================================================
+   LEARN BEHAVIOUR (per-chat) — gated to 100+ messages
+   ============================================================ */
+const LEARN_THRESHOLD = 100;
+function updateLearnButton(count) {
+  const btn = $("qaLearn");
+  const label = $("qaLearnLabel");
+  if (!btn || !label) return;
+  if (count >= LEARN_THRESHOLD) {
+    btn.disabled = false;
+    btn.title = "Have the AI study this conversation's tone & style, and reply in kind.";
+    label.textContent = "Learn behaviour";
+  } else {
+    btn.disabled = true;
+    btn.title = `Available at ${LEARN_THRESHOLD} messages in this chat.`;
+    label.textContent = `Learn behaviour (${count}/${LEARN_THRESHOLD})`;
+  }
+}
+
+$("qaLearn").addEventListener("click", async () => {
+  if (!activeJid) return;
+  const box = $("chatSummary");
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="suggest-loading">🧠 Studying this conversation…</div>`;
+  const r = await POST(`/api/chats/${encodeURIComponent(activeJid)}/learn`, {});
+  if (r?.error) {
+    box.innerHTML = `<div class="suggest-loading">${escHtml(r.error)}</div>`;
+    return;
+  }
+  const summary = r?.summary ? `<div class="chat-summary-body"><strong>Summary</strong><br>${escHtml(r.summary).replace(/\n/g, "<br>")}</div>` : "";
+  const style = r?.style ? `<div class="chat-summary-body" style="margin-top:10px"><strong>Detected style</strong><br>${escHtml(r.style).replace(/\n/g, "<br>")}</div>` : "";
+  box.innerHTML = (summary + style) || `<div class="suggest-loading">Couldn't learn from this chat</div>`;
+  toast("Behaviour learned — AI will reply in this chat's style", "success");
 });
 
 /* ============================================================

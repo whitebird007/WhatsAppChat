@@ -289,6 +289,7 @@
           <button class="qa-btn" id="qaSummarize"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h12M4 9h12M4 13h7"/></svg>Summarize chat</button>
           <button class="qa-btn" id="qaPayment"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M2.5 8h15"/></svg>Request payment</button>
           <button class="qa-btn" id="qaBooking"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg>Book appointment</button>
+          <button class="qa-btn" id="qaLearn"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3a4 4 0 014 4c0 1.5-1 2.5-2 3.2-.7.5-1 .9-1 1.8M10 15v.5"/><circle cx="10" cy="10" r="8"/></svg><span id="qaLearnLabel">Learn behaviour</span></button>
         </div>
         <div id="chatSummary" class="chat-summary hidden"></div>
       </div>
@@ -571,6 +572,13 @@
       </label>
       <button id="settingsSave">Save settings</button>
       <p class="saved-note hidden" id="savedNote">Saved.</p>
+
+      <hr style="border:none;border-top:1px solid var(--line-2);margin:28px 0" />
+      <h2 style="font-size:18px">Your writing style (global)</h2>
+      <p class="panel-sub">Teach the AI to reply in <strong>your</strong> voice. It studies the messages you've sent across all chats — your tone, formality, emoji and punctuation habits — so AI replies sound like you. Available once you've sent 100+ messages.</p>
+      <div id="ownerStyleStatus" class="info-note" style="display:none"></div>
+      <button class="primary-btn" id="learnStyleBtn">Learn my writing style</button>
+      <div id="ownerStyleBox" class="chat-summary hidden" style="margin-top:14px"></div>
     </div>
   </section>
 

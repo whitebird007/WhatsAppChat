@@ -27,7 +27,7 @@ export async function generateReply(tenantId, jid) {
   const chat = q.getChat.get(tenantId, jid);
   const agent = resolveAgent(tenantId, chat);
 
-  const systemPrompt = buildSystemPrompt(tenantId, agent);
+  const systemPrompt = buildSystemPrompt(tenantId, agent, chat);
   const turns = buildTurns(recent);
   if (!turns.length) return null;
 
@@ -95,6 +95,36 @@ export async function summarizeChat(tenantId, jid) {
   } catch (err) { console.error(`[ai-summarize:${tenantId}]`, err.message); return null; }
 }
 
+/** Learn how the BUSINESS OWNER writes (global voice) from their sent messages. */
+export async function learnOwnerStyle(tenantId) {
+  const rows = q.recentOwnerMessages.all(tenantId, 300).map((r) => r.body).filter(Boolean);
+  if (rows.length < 100) { const e = new Error(`Need 100 sent messages to learn your style (have ${rows.length}).`); e.tooFew = rows.length; throw e; }
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, null);
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
+  const sample = rows.slice(0, 200).join("\n---\n");
+  const system = "You analyze how a business owner writes on WhatsApp so an AI assistant can reply in their exact voice. From these real messages, produce a concise STYLE GUIDE (max ~150 words) covering: tone (warm/formal/casual), formality, typical greeting & sign-off, emoji usage, punctuation habits, sentence length, capitalization, languages/Roman-Urdu, and any catchphrases. Write it as direct instructions to the assistant, e.g. 'Keep replies short and warm. Use one emoji max...'. Output ONLY the guide.";
+  const turns = [{ role: "user", content: `Here are the owner's messages:\n${sample}` }];
+  const out = provider === "openai" ? await callOpenAI(system, turns, apiKey, model) : await callAnthropic(system, turns);
+  return out;
+}
+
+/** Learn a single conversation: a running summary + how that customer communicates. */
+export async function learnChatBehaviour(tenantId, jid) {
+  const recent = q.recentMessages.all(tenantId, jid, 200).reverse().filter((m) => !m.mime_type);
+  if (recent.length < 1) { const e = new Error("No messages to analyze yet."); throw e; }
+  const agent = resolveAgent(tenantId, q.getChat.get(tenantId, jid));
+  const { apiKey, model, provider } = resolveProviderConfig(tenantId, agent);
+  if (!apiKey) { const e = new Error("No AI API key configured"); e.aiProviderError = true; throw e; }
+  const convo = recent.map((m) => `${m.from_me ? "Owner" : "Customer"}: ${m.body}`).join("\n");
+  const system = "Analyze this WhatsApp conversation. Return STRICT JSON with two keys: \"summary\" (3-5 sentences: who the customer is, what they want, status, any commitments) and \"style\" (how THIS customer communicates — tone, formality, language/Roman-Urdu, emoji/punctuation habits, and how the owner should mirror them naturally; ~80 words). Output ONLY the JSON object.";
+  const turns = [{ role: "user", content: convo }];
+  const raw = provider === "openai" ? await callOpenAI(system, turns, apiKey, model) : await callAnthropic(system, turns);
+  let summary = "", style = "";
+  try { const m = (raw || "").match(/\{[\s\S]*\}/); const o = m ? JSON.parse(m[0]) : {}; summary = o.summary || ""; style = o.style || ""; }
+  catch { summary = raw || ""; }
+  return { summary, style };
+}
+
 /**
  * Pick which AI persona answers a chat:
  *   1. the agent explicitly assigned to the chat, else
@@ -110,20 +140,32 @@ function resolveAgent(tenantId, chat) {
   return active ? q.getAgent.get(active.id, tenantId) : null;
 }
 
-function buildSystemPrompt(tenantId, agent) {
+function buildSystemPrompt(tenantId, agent, chat = null) {
+  let prompt;
   if (agent) {
-    let prompt = agent.instructions || "You are a helpful WhatsApp business assistant.";
+    prompt = agent.instructions || "You are a helpful WhatsApp business assistant.";
     if (agent.playbook?.trim()) prompt += `\n\n## Conversation Playbook:\n${agent.playbook}`;
     if (agent.rules?.trim()) prompt += `\n\n## Rules:\n${agent.rules}`;
-    // Append knowledge sources
     const knowledge = q.getKnowledgeForAgent.all(tenantId, agent.id);
     if (knowledge.length) {
       prompt += "\n\n## Knowledge Base:\n";
       for (const k of knowledge) prompt += `\n### ${k.file_name}\n${k.content}\n`;
     }
-    return prompt;
+  } else {
+    prompt = getSetting(tenantId, "ai_system_prompt") || "You are a helpful assistant.";
   }
-  return getSetting(tenantId, "ai_system_prompt") || "You are a helpful assistant.";
+  return prompt + behaviourAddendum(tenantId, chat);
+}
+
+/* Learned behaviour: the owner's global voice + this conversation's summary & the
+   customer's communication style. Appended to every AI reply so it sounds natural. */
+function behaviourAddendum(tenantId, chat) {
+  let extra = "";
+  const ownerStyle = getSetting(tenantId, "owner_style");
+  if (ownerStyle) extra += `\n\n## Write in the business owner's voice:\n${ownerStyle}`;
+  if (chat?.ai_summary) extra += `\n\n## What's happened in this conversation:\n${chat.ai_summary}`;
+  if (chat?.ai_style) extra += `\n\n## How this customer communicates (mirror it naturally):\n${chat.ai_style}`;
+  return extra;
 }
 
 function buildTurns(recent) {

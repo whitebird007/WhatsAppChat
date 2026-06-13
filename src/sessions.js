@@ -354,6 +354,11 @@ async function handleMessage(tenantId, sock, msg) {
   // Outbound webhook (Make.com / Zapier) — fire and forget
   fireWebhook(tenantId, { event: "message.received", jid, name: msg.pushName || null, text, ts });
 
+  // Auto-replies (flows / rules / AI) only run on TEXT messages. Voice notes,
+  // images, videos and documents are received & shown, but never auto-answered —
+  // the AI can't reliably understand media, so it stays silent on them.
+  if (!text || !text.trim()) return;
+
   const tenant = q.tenantById.get(tenantId);
   if (!tenantActive(tenant)) return; // trial expired / canceled: inbox works, automation off
 

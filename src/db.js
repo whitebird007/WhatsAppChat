@@ -155,6 +155,8 @@ const migrationStmts = [
   "ALTER TABLE messages ADD COLUMN status INTEGER",
   "ALTER TABLE chats ADD COLUMN phone TEXT",
   "ALTER TABLE chats ADD COLUMN profile_pic TEXT",
+  "ALTER TABLE chats ADD COLUMN ai_summary TEXT",
+  "ALTER TABLE chats ADD COLUMN ai_style TEXT",
 ];
 for (const stmt of migrationStmts) {
   try { db.exec(stmt); } catch {}
@@ -517,6 +519,10 @@ export const q = {
   setChatLifecycle: db.prepare("UPDATE chats SET lifecycle = ? WHERE tenant_id = ? AND jid = ?"),
   setChatAgent: db.prepare("UPDATE chats SET agent_id = ? WHERE tenant_id = ? AND jid = ?"),
   setChatAvatar: db.prepare("UPDATE chats SET profile_pic = ? WHERE tenant_id = ? AND jid = ?"),
+  setChatInsight: db.prepare("UPDATE chats SET ai_summary = ?, ai_style = ? WHERE tenant_id = ? AND jid = ?"),
+  countChatMessages: db.prepare("SELECT COUNT(*) AS n FROM messages WHERE tenant_id = ? AND jid = ?"),
+  countOwnerMessages: db.prepare("SELECT COUNT(*) AS n FROM messages WHERE tenant_id = ? AND from_me = 1 AND via = 'human'"),
+  recentOwnerMessages: db.prepare("SELECT body FROM messages WHERE tenant_id = ? AND from_me = 1 AND via = 'human' AND mime_type IS NULL ORDER BY ts DESC LIMIT ?"),
   // delete a conversation + everything attached to it
   deleteChatRow: db.prepare("DELETE FROM chats WHERE tenant_id = ? AND jid = ?"),
   deleteChatMessages: db.prepare("DELETE FROM messages WHERE tenant_id = ? AND jid = ?"),
