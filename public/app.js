@@ -121,12 +121,18 @@ let activeView = "chats";
 function renderStatus(s) {
   const dot = $("connDot");
   const label = $("connLabel");
+  const prevStatus = connStatus;
   connStatus = s.status;
 
   dot.className = "conn-dot";
   if (s.status === "connected") {
     dot.classList.add("connected");
     label.textContent = `Connected · ${s.me || ""}`;
+    // Once linked, the QR is useless: auto-close the enlarged modal and clear it.
+    $("qrModal").classList.add("hidden");
+    $("qrModalImg").src = "";
+    $("qrImg").src = "";
+    if (prevStatus && prevStatus !== "connected") toast("WhatsApp connected", "success");
   } else if (s.status === "qr") {
     dot.classList.add("qr");
     label.textContent = "Scan QR code to connect";
