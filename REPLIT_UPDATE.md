@@ -1,35 +1,38 @@
 # How to update your Replit app from GitHub (read this carefully)
 
-GitHub (`whitebird007/WhatsAppChat`) is now the **single source of truth** and
-contains the complete, working app. Your Replit workspace may have its own
-separate edits (e.g. made by Replit's AI agent). To avoid merge conflicts, the
-safest path is to make Replit **match GitHub exactly**.
+GitHub (`whitebird007/WhatsAppChat`) is the **single source of truth** and has the
+complete, working app. To avoid merge conflicts, make Replit **match GitHub exactly**.
 
-> ✅ Your live data is safe. `data.sqlite` (all your chats/contacts) and `auth/`
-> (your WhatsApp login) are git-ignored, so the steps below **never touch them**.
-> You will NOT have to re-scan the QR, and you won't lose any data.
+> ✅ Your data is safe. `data.sqlite` (chats/contacts) and `auth/` (your WhatsApp
+> login) are git-ignored, so the steps below **never touch them**. You do NOT lose
+> data. (You *may* need to re-scan the QR once — see note below.)
 
 ---
 
-## What's new in this update
-1. **Voice messages now actually deliver.** Browser recordings are converted to
-   true WhatsApp OGG/Opus format before sending (the reason they weren't arriving).
-2. **Send & receive all media** — photos, videos, voice notes, documents — shown
-   inline (image previews, audio players, download cards).
-3. **Delivery status ticks** on every message you send:
-   - 🕓 sending → ✓ sent to WhatsApp → ✓✓ delivered → ✓✓ (blue) read → ✕ failed
-   - Now you can SEE whether WhatsApp actually accepted/delivered each message.
-4. **Human-like AI replies** — the AI agent shows "typing…" and waits ~3–10s
-   (scaled to message length) instead of replying instantly.
+## What changed (latest version)
+1. **Voice messages now deliver** — recordings are converted to true WhatsApp
+   OGG/Opus before sending (via `ffmpeg-static`).
+2. **Send & receive all media** — photos, video, voice notes, documents, shown inline.
+3. **Delivery ticks** on sent messages: 🕓 sending → ✓ sent → ✓✓ delivered →
+   ✓✓ (blue) read → ✕ failed.
+4. **Delivery-failure banner** — if WhatsApp rejects a message, a red banner shows
+   the error code (e.g. 463) with a plain-language reason.
+5. **`getMessage` callback** — lets Baileys re-send on retry requests (a common cause
+   of "looks sent but never arrives").
+6. **Baileys upgraded to 7.0.0-rc13** — current WhatsApp protocol + proper `@lid` support.
+7. **Reply in-thread, no JID conversion** — replies go to the exact address the
+   customer used (`@lid` or phone), so WhatsApp sees a real reply, not a new
+   conversation. This is the key delivery fix.
+8. **No more duplicate chats** — messages are normalized by phone so one contact = one thread.
+9. **Human-like AI replies** — shows "typing…" and waits ~3–10s instead of replying instantly.
 
-New dependency: **`ffmpeg-static`** (audio conversion) — installed by `npm install`.
+New dependencies installed by `npm install`: **`ffmpeg-static`** + **`@whiskeysockets/baileys@7.0.0-rc13`**.
 
 ---
 
-## Steps in Replit
+## Steps in Replit (the only commands you need)
 
-### Option A — sync to GitHub (recommended, conflict-free)
-Open the **Shell** in Replit and run, one line at a time:
+Open the **Shell** and run these, one line at a time:
 
 ```bash
 git fetch origin
@@ -37,37 +40,30 @@ git reset --hard origin/main
 npm install
 ```
 
-- `git reset --hard origin/main` makes Replit's code identical to GitHub.
-  ⚠️ This **discards any edits made directly in Replit** (including changes by
-  Replit's AI agent). That's intentional — everything important is already in this
-  GitHub version, including the voice fix, delivery ticks, and the AI typing delay.
-- `npm install` installs the new `ffmpeg-static` package.
+Then click **Run** to test, and **Redeploy** (Reserved VM) to publish.
 
-Then click **Run** to test, and **Redeploy** to publish.
+- `git reset --hard origin/main` makes Replit identical to GitHub.
+  ⚠️ This **discards any code edits made directly in Replit** (including changes by
+  Replit's own AI agent). That is intentional — everything needed is already in
+  this GitHub version.
+- `npm install` installs the new packages.
 
-### Option B — keep Replit's edits too (advanced, may conflict)
-Only if you have Replit-side changes you must keep:
-```bash
-git stash
-git pull origin main
-npm install
-git stash pop   # may produce merge conflicts you'll have to resolve by hand
-```
-If you're not sure, use **Option A** — it's clean and you lose nothing meaningful.
+> 🔑 **Rule going forward:** make ALL code changes through GitHub only. On Replit,
+> just `git fetch` + `git reset --hard origin/main` + redeploy. Do **not** ask
+> Replit's AI to edit the code — that's what causes conflicts.
 
 ---
 
-## After updating
-1. **Run** → confirm `Portal running…`.
-2. Open the app — your WhatsApp should still be connected (no re-scan needed).
-3. **Redeploy** (Reserved VM).
-4. Send yourself a **voice message** and a **photo** from the app → confirm they
-   arrive on your phone, and watch the tick turn ✓✓.
+## After updating — test in this order
+1. **Replies (the real test):** have someone message your WhatsApp first, then reply
+   from the app. It should deliver — watch the tick turn ✓✓.
+2. **Voice & photo:** send a voice note and a photo in that same chat → confirm they arrive.
+3. **Cold outbound (expected to be limited):** "New chat" to a number that never
+   messaged you may still fail (463). That's a WhatsApp restriction on
+   unofficial accounts, not a bug — reliable cold outbound needs the official Cloud API.
 
-## If messages still don't deliver after this
-The delivery ticks will tell us where it's failing:
-- Stuck on ✓ (single tick) = WhatsApp received it but didn't deliver → connection
-  or recipient issue.
-- Shows ✕ = the send was rejected → send me a screenshot + the Replit logs.
-- Never leaves 🕓 = the WhatsApp socket isn't connected → reconnect (scan QR).
+## Notes
+- We upgraded the WhatsApp engine (Baileys 6 → 7). If the app shows "disconnected"
+  after deploy, just **re-scan the QR once**. Chats/contacts are untouched.
+- If a message fails, the red banner + ✕ tick now tell you the exact WhatsApp code.
 </content>
