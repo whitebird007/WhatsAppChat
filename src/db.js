@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
 import fs from "fs";
 import path from "path";
-import { resolveDataDir, resolveDbPath } from "./db-sync.js";
+import { resolveDataDir, resolveDbPath, restoreDbFromKv, kvAvailable, KV_KEY } from "./db-sync.js";
 
 // Where persistent data lives. Set DATA_DIR (or DATABASE_PATH) to a directory
 // OUTSIDE the deployed code bundle so republishing never overwrites the live
@@ -10,6 +10,15 @@ import { resolveDataDir, resolveDbPath } from "./db-sync.js";
 export const DATA_DIR = resolveDataDir();
 const DB_PATH = resolveDbPath();
 try { fs.mkdirSync(path.dirname(DB_PATH), { recursive: true }); } catch {}
+
+// Diagnostic: make the persistence config impossible to misread in the logs.
+console.log(`[db] KV=${kvAvailable() ? `ON key="${KV_KEY}"` : "OFF (REPLIT_DB_URL not set)"} | DATA_DIR=${process.env.DATA_DIR || "(unset → DEV key)"}`);
+
+// Restore from KV BEFORE opening the DB. Top-level await runs here regardless
+// of whether the npm "prestart" hook fired, so a custom deployment run command
+// (e.g. `node src/server.js` instead of `npm start`) can't break persistence.
+await restoreDbFromKv();
+
 console.log(`[db] using ${DB_PATH}`);
 const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL;");

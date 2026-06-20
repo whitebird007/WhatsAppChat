@@ -1556,7 +1556,7 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.5.9 (no plans, trials or limits)";
+const APP_VERSION = "v0.5.10 (restore-before-open, KV diagnostics)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
