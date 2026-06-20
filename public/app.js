@@ -217,16 +217,22 @@ function renderStatus(s) {
     $("qrModal").classList.add("hidden");
     $("qrModalImg").src = "";
     $("qrImg").src = "";
+    $("qrImg").style.display = "none";
+    if ($("qrSpinner")) $("qrSpinner").style.display = "none";
     if (prevStatus && prevStatus !== "connected") toast("WhatsApp connected", "success");
-  } else if (s.status === "qr") {
+  } else if (s.status === "qr" && s.qr) {
     dot.classList.add("qr");
     label.textContent = "Scan QR code to connect";
-    $("qrImg").src = s.qr || "";
-    $("pairingNote").textContent = "Point your phone camera at the QR code";
+    $("qrImg").src = s.qr;
+    $("qrImg").style.display = "";
+    if ($("qrSpinner")) $("qrSpinner").style.display = "none";
+    $("pairingNote").textContent = "Open WhatsApp on your phone and scan this code";
   } else {
-    label.textContent = "Not connected";
+    label.textContent = "Connecting…";
     $("qrImg").src = "";
-    $("pairingNote").textContent = "Generate a QR code to link your WhatsApp";
+    $("qrImg").style.display = "none";
+    if ($("qrSpinner")) $("qrSpinner").style.display = "";
+    $("pairingNote").textContent = "Generating your QR code…";
   }
   updatePairingBanner();
 }
@@ -3217,6 +3223,12 @@ async function init() {
   // Load status
   const status = await GET("/api/status");
   renderStatus(status);
+  // Auto-start pairing so the QR appears on its own after login (no manual click).
+  // startSession is a no-op if a session is already running/connected.
+  if (status?.status !== "connected") {
+    $("pairingNote").textContent = "Generating QR…";
+    POST("/api/connect").catch(() => {});
+  }
 
   // Load chats + templates
   await Promise.all([loadChats(), loadTemplateCache()]);

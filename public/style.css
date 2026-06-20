@@ -302,6 +302,13 @@ input, textarea, select { font-family: inherit; }
   margin: 0 auto;
   padding: 16px 24px;
 }
+.qr-spinner {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid var(--line, #e5e7eb);
+  border-top-color: var(--brand-600, #0d6b50);
+  animation: qrspin 0.8s linear infinite;
+}
+@keyframes qrspin { to { transform: rotate(360deg); } }
 .pairing-banner-left .qr-frame-sm {
   display: inline-flex;
   align-items: center;
