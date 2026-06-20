@@ -6,7 +6,8 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import { q, getSetting, convQuota, tenantActive, PLANS, getPlans, newId, LIFECYCLE_LABELS, ensureStages, DATA_DIR } from "./db.js";
+import { q, getSetting, convQuota, tenantActive, PLANS, getPlans, newId, LIFECYCLE_LABELS, ensureStages, DATA_DIR, checkpointDb } from "./db.js";
+import { startBackupLoop, setCheckpointHook, triggerBackup } from "./db-sync.js";
 import { validateFlow } from "./flows.js";
 import { signup, login, authMiddleware, verifyToken, createOrganization, switchOrg, hashPassword, verifyPassword, signToken } from "./auth.js";
 import {
@@ -69,6 +70,7 @@ app.post("/api/auth/signup", (req, res) => {
   try {
     const { token, tenant } = signup(req.body || {});
     res.json({ token, tenant: publicTenant(tenant) });
+    triggerBackup("signup"); // persist immediately so a quick republish can't lose the new account
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
@@ -76,6 +78,7 @@ app.post("/api/auth/login", (req, res) => {
   try {
     const { token, tenant } = login(req.body || {});
     res.json({ token, tenant: publicTenant(tenant) });
+    triggerBackup("login");
   } catch (err) { res.status(401).json({ error: err.message }); }
 });
 
@@ -1553,12 +1556,16 @@ onEvent(broadcastWs);
 onAutomationEvent(broadcastWs);
 
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = "v0.5.5 (dedupe duplicate inbound messages)";
+const APP_VERSION = "v0.5.6 (KV-backed DB persistence, unlimited mode)";
 server.listen(PORT, () => {
   console.log("======================================================");
   console.log(`Zaply ${APP_VERSION}`);
   console.log(`Portal running at http://localhost:${PORT}`);
   console.log("======================================================");
+  // Durable persistence: snapshot the SQLite DB (incl. WhatsApp auth) to
+  // Replit KV so account + session survive every redeploy. No-op off Replit.
+  setCheckpointHook(checkpointDb);
+  startBackupLoop({ intervalMs: 30_000, initialDelayMs: 10_000 });
   resumeAllSessions();
   startAutomationScheduler();
 });

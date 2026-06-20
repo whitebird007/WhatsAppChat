@@ -5,7 +5,10 @@ import { q, getSetting } from "./db.js";
  * Uses per-chat agent if set, otherwise falls back to global settings.
  */
 export async function generateReply(tenantId, jid) {
-  const maxPerHour = parseInt(process.env.AI_MAX_REPLIES_PER_HOUR || "10", 10);
+  // Per-chat hourly cap (anti-runaway). Default 30; effectively unlimited when
+  // ZAPLY_UNLIMITED=1 (self-hosted / personal use). Override with AI_MAX_REPLIES_PER_HOUR.
+  const defaultCap = process.env.ZAPLY_UNLIMITED === "1" ? 1000 : 30;
+  const maxPerHour = parseInt(process.env.AI_MAX_REPLIES_PER_HOUR || String(defaultCap), 10);
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
   const { n } = q.countRecentAiReplies.get(tenantId, jid, oneHourAgo);
   if (n >= maxPerHour) return null;

@@ -16,6 +16,7 @@ import { execFile } from "child_process";
 import ffmpegPath from "ffmpeg-static";
 import { fileURLToPath } from "url";
 import { q, getSetting, automationAllowed, convQuota, tenantActive, DATA_DIR } from "./db.js";
+import { triggerBackup } from "./db-sync.js";
 import { runFlows } from "./flows.js";
 import { matchRule } from "./rules.js";
 import { generateReply } from "./ai.js";
@@ -275,7 +276,12 @@ export async function startSession(tenantId) {
   sessions.set(tenantId, session);
   broadcast(tenantId, { type: "status", data: getSessionStatus(tenantId) });
 
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", () => {
+    saveCreds();
+    // WhatsApp auth lives in the DB; snapshot it to KV right away so a redeploy
+    // between interval backups can't drop the linked session.
+    triggerBackup("wa-creds");
+  });
 
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;

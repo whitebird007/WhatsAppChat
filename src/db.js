@@ -2,23 +2,22 @@ import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { resolveDataDir, resolveDbPath } from "./db-sync.js";
 
 // Where persistent data lives. Set DATA_DIR (or DATABASE_PATH) to a directory
 // OUTSIDE the deployed code bundle so republishing never overwrites the live
-// database. Falls back to the repo root for local/dev use.
-export const DATA_DIR = process.env.DATA_DIR
-  ? path.resolve(process.env.DATA_DIR)
-  : path.join(__dirname, "..");
-const DB_PATH = process.env.DATABASE_PATH
-  ? path.resolve(process.env.DATABASE_PATH)
-  : path.join(DATA_DIR, "data.sqlite");
+// database. Path logic is shared with db-sync.js so the KV restore agrees.
+export const DATA_DIR = resolveDataDir();
+const DB_PATH = resolveDbPath();
 try { fs.mkdirSync(path.dirname(DB_PATH), { recursive: true }); } catch {}
 console.log(`[db] using ${DB_PATH}`);
 const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL;");
+
+// Flush the WAL into the main DB file so a file-level backup is complete.
+export function checkpointDb() {
+  try { db.exec("PRAGMA wal_checkpoint(TRUNCATE);"); } catch {}
+}
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS tenants (
@@ -788,12 +787,15 @@ export function chatCounted(tenantId, jid) {
 }
 
 export function automationAllowed(tenant, jid) {
+  if (process.env.ZAPLY_UNLIMITED === "1") return true;
   if (chatCounted(tenant.id, jid)) return true;
   return convQuota(tenant).allowed;
 }
 
 export function tenantActive(tenant) {
   if (!tenant || tenant.status !== "active") return false;
+  // Self-hosted / personal: no trial expiry, no plan gating.
+  if (process.env.ZAPLY_UNLIMITED === "1") return true;
   if (tenant.plan === "trial") return Date.now() < (tenant.trial_ends || 0);
   return true;
 }
