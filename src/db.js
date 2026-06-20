@@ -786,17 +786,15 @@ export function chatCounted(tenantId, jid) {
   return n > 0;
 }
 
+// No plans, no trials, no quotas — automation is always allowed.
+// (A suspended org is still blocked by tenantActive's status check.)
 export function automationAllowed(tenant, jid) {
-  if (process.env.ZAPLY_UNLIMITED === "1") return true;
-  if (chatCounted(tenant.id, jid)) return true;
-  return convQuota(tenant).allowed;
+  return true;
 }
 
 export function tenantActive(tenant) {
   if (!tenant || tenant.status !== "active") return false;
-  // Self-hosted / personal: no trial expiry, no plan gating.
-  if (process.env.ZAPLY_UNLIMITED === "1") return true;
-  if (tenant.plan === "trial") return Date.now() < (tenant.trial_ends || 0);
+  // No trial expiry, no plan gating — everything is unlimited.
   return true;
 }
 

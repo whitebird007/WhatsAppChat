@@ -44,7 +44,7 @@
     <label class="field"><span>Password</span><input id="password" type="password" autocomplete="current-password" /></label>
     <button class="primary" id="submitBtn">Sign in</button>
     <div class="auth-error" id="err"></div>
-    <div class="switch" id="switchRow">New here? <a id="switchLink">Start your free 7-day trial</a></div>
+    <div class="switch" id="switchRow">New here? <a id="switchLink">Create an account</a></div>
   </div>
   <div id="poweredBy" style="margin-top:16px;font-size:12px;color:var(--ink-4);text-align:center;display:none">Powered by <strong>Zaply</strong></div>
 <script>
@@ -71,14 +71,14 @@ let brandSub = "Sign in to your WhatsApp AI inbox.";
 })();
 function render() {
   document.body.classList.toggle("mode-signup", mode === "signup");
-  document.getElementById("title").textContent = mode === "signup" ? "Start your free trial" : "Welcome back";
+  document.getElementById("title").textContent = mode === "signup" ? "Create your account" : "Welcome back";
   document.getElementById("sub").textContent = mode === "signup"
-    ? "7 days free. No credit card needed."
+    ? "Set up your WhatsApp AI inbox in minutes."
     : brandSub;
   document.getElementById("submitBtn").textContent = mode === "signup" ? "Create account" : "Sign in";
   document.getElementById("switchRow").innerHTML = mode === "signup"
     ? 'Already have an account? <a id="switchLink">Sign in</a>'
-    : 'New here? <a id="switchLink">Start your free 7-day trial</a>';
+    : 'New here? <a id="switchLink">Create an account</a>';
   document.getElementById("switchLink").onclick = () => { mode = mode === "signup" ? "login" : "signup"; render(); };
 }
 render();

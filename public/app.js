@@ -3062,14 +3062,6 @@ function applyMe(me) {
   myOrgs = me.orgs || [];
   myRole = me.role || "agent";
 
-  // Plan pill
-  let label = t.plan_label;
-  if (t.plan === "trial" && t.trial_ends) {
-    const days = Math.max(0, Math.ceil((t.trial_ends - Date.now()) / 86400000));
-    label += ` · ${days} day${days !== 1 ? "s" : ""} left`;
-  }
-  $("planPill").textContent = label;
-
   // Org switcher
   const name = t.business_name || "My Organization";
   $("orgCurrentName").textContent = name;
